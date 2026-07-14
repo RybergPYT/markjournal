@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Markjournal</title>
+<meta name="theme-color" content="#2C5E38">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Markjournal">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" type="image/png" href="./icon-180.png">
+<style>
+  :root{
+    --green-900:#1E3D28;
+    --green-700:#2C5E38;
+    --green-600:#3A7D44;
+    --green-100:#E3EEDF;
+    --gold:#C98F2B;
+    --gold-soft:#F4E7CB;
+    --red:#B3402F;
+    --red-soft:#F6E3DF;
+    --blue:#3C6E9F;
+
+    --app-bg:#F3F4EE;
+    --card:#FFFFFF;
+    --line:#DFE4D7;
+    --ink:#20261F;
+    --muted:#79816F;
+  }
+  *{box-sizing:border-box; margin:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    background:#20281c;
+    overscroll-behavior:none;
+  }
+  .app{
+    height:100dvh; max-width:560px; margin:0 auto;
+    background:var(--app-bg); color:var(--ink);
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
+  @media (min-width:600px){
+    .app{box-shadow:0 0 60px rgba(0,0,0,.5)}
+  }
+  .screens{flex:1; position:relative; overflow:hidden}
+  .scr{
+    position:absolute; inset:0;
+    display:none; flex-direction:column;
+    overflow-y:auto;
+    padding-bottom:8px;
+    padding-top:env(safe-area-inset-top);
+  }
+  .scr.active{display:flex}
+
+  /* ---------- Tab bar ---------- */
+  .tabbar{
+    flex-shrink:0;
+    background:var(--card);
+    border-top:1px solid var(--line);
+    display:flex; align-items:flex-start; justify-content:space-around;
+    padding-top:8px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  .tab{
+    background:none; border:none; font:inherit; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--muted); font-size:.62rem; font-weight:600; width:64px;
+  }
+  .tab svg{width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .tab.active{color:var(--green-700)}
+  .tab-plus{
+    width:52px; height:52px; margin-top:-20px;
+    background:var(--green-700); color:#fff; border:none; border-radius:50%;
+    font-size:1.7rem; font-weight:400; cursor:pointer; line-height:1;
+    box-shadow:0 6px 14px rgba(44,94,56,.4);
+  }
+
+  /* ---------- Shared app components ---------- */
+  .apphead{
+    padding:14px 18px 12px; flex-shrink:0;
+    display:flex; align-items:center; gap:10px;
+  }
+  .apphead h2{font-size:1.3rem; letter-spacing:-.02em; flex:1}
+  .backbtn{
+    background:none; border:none; cursor:pointer; color:var(--green-700);
+    font:inherit; font-size:.9rem; font-weight:600; padding:4px 0;
+    display:flex; align-items:center; gap:2px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    margin:0 16px 10px; overflow:hidden;
+  }
+  .row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-bottom:1px solid var(--line);
+    cursor:pointer; background:none; border-left:none; border-right:none; border-top:none;
+    width:100%; text-align:left; font:inherit; color:inherit;
+  }
+  .row:last-child{border-bottom:none}
+  .row .grow{flex:1; min-width:0}
+  .row .title{font-size:.9rem; font-weight:600}
+  .row .sub{font-size:.75rem; color:var(--muted); margin-top:2px}
+  .row .end{font-size:.78rem; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right; flex-shrink:0}
+  .chev{color:var(--line); flex-shrink:0; font-size:.9rem}
+  .swatch{width:34px; height:34px; border-radius:9px; flex-shrink:0}
+  .sect-label{
+    font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:10px 18px 6px;
+  }
+  .pill{
+    font-size:.66rem; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap;
+  }
+  .pill.ok{background:var(--green-100); color:var(--green-700)}
+  .pill.warn{background:var(--gold-soft); color:#8a6011}
+  .pill.bad{background:var(--red-soft); color:var(--red)}
+  .pill.info{background:#E1EAF3; color:var(--blue)}
+
+  /* ---------- Map screen ---------- */
+  #scr-kort{padding-bottom:0; padding-top:0}
+  .mapwrap{position:relative; flex:1; min-height:0; background:#20281c; touch-action:none}
+  .mapwrap svg{position:absolute; inset:0; width:100%; height:100%; cursor:grab}
+  .mapwrap svg.dragging{cursor:grabbing}
+  .field{cursor:pointer}
+  .map-top{
+    position:absolute; top:calc(10px + env(safe-area-inset-top)); left:12px; right:12px;
+    display:flex; gap:8px; z-index:3;
+  }
+  .map-chip{
+    background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:99px;
+    padding:7px 12px; font-size:.74rem; font-weight:600; color:var(--ink);
+    cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit;
+  }
+  .map-chip.on{background:var(--green-700); color:#fff; border-color:var(--green-700)}
+  .zoombtns{
+    position:absolute; right:12px; top:calc(56px + env(safe-area-inset-top)); z-index:3;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .zoombtn{
+    width:36px; height:36px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.94); color:var(--ink); font-size:1.15rem; font-weight:600;
+    cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit; line-height:1;
+  }
+  .attr{
+    position:absolute; right:10px; bottom:96px; z-index:3;
+    font-size:.55rem; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8);
+    background:rgba(0,0,0,.25); padding:2px 7px; border-radius:99px;
+  }
+  .weathercard{
+    position:absolute; left:12px; right:12px; bottom:12px; z-index:3;
+    background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:14px;
+    padding:10px 14px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 6px 18px rgba(20,26,18,.15); cursor:pointer;
+  }
+  .weathercard .temp{font-size:1.4rem; font-weight:700; font-variant-numeric:tabular-nums}
+  .weathercard .wsub{font-size:.68rem; color:var(--muted); line-height:1.45; flex:1; min-width:0}
+  .gps-dot{animation:pulse 2s infinite}
+  @keyframes pulse{0%{opacity:.9}50%{opacity:.4}100%{opacity:.9}}
+  @media (prefers-reduced-motion: reduce){ .gps-dot{animation:none} }
+
+  /* ---------- Mark detail ---------- */
+  .hero-stats{display:flex; gap:8px; margin:0 16px 10px}
+  .stat{
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; min-width:0;
+  }
+  .stat .v{font-size:1rem; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere}
+  .stat .k{font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-top:2px}
+  .journal-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+
+  /* ---------- Sheet (registration flow) ---------- */
+  .sheet-veil{
+    position:absolute; inset:0; background:rgba(22,26,21,.45); z-index:10;
+    display:none; align-items:flex-end;
+  }
+  .sheet-veil.open{display:flex}
+  .sheet{
+    background:var(--app-bg); width:100%; max-height:92%;
+    border-radius:24px 24px 0 0; display:flex; flex-direction:column;
+    overflow:hidden;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .sheet-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px 8px; flex-shrink:0;
+  }
+  .sheet-head h3{font-size:1.05rem}
+  .sheet-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);font-family:inherit}
+  .sheet-body{overflow-y:auto; padding-bottom:16px}
+  .typegrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 16px 16px}
+  .typebtn{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px 12px; cursor:pointer; font:inherit; color:inherit; text-align:left;
+  }
+  .typebtn .ico{font-size:1.4rem}
+  .typebtn .t{font-weight:700; font-size:.86rem; margin-top:6px}
+  .typebtn .d{font-size:.7rem; color:var(--muted); margin-top:2px}
+  .fieldchips{display:flex; flex-wrap:wrap; gap:8px; padding:4px 16px 12px}
+  .fchip{
+    background:var(--card); border:1.5px solid var(--line); border-radius:99px;
+    padding:8px 13px; font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; color:inherit;
+  }
+  .fchip.sel{border-color:var(--green-700); background:var(--green-100); color:var(--green-900)}
+  .search{
+    margin:4px 16px 10px; display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--line); border-radius:11px; padding:9px 12px;
+  }
+  .search input{border:none; outline:none; background:none; font:inherit; flex:1; color:inherit; font-size:16px}
+  .formrow{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 14px; border-bottom:1px solid var(--line); font-size:.85rem;
+  }
+  .formrow:last-child{border-bottom:none}
+  .formrow .lab{color:var(--muted); font-size:.78rem}
+  .formrow input{
+    border:none; outline:none; background:none; font:inherit; text-align:right;
+    color:inherit; width:110px; font-variant-numeric:tabular-nums; font-size:16px;
+  }
+  .autotag{font-size:.6rem; color:var(--blue); font-weight:700; letter-spacing:.04em}
+  .bigbtn{
+    display:block; width:calc(100% - 32px); margin:14px 16px 6px;
+    background:var(--green-700); color:#fff; border:none; border-radius:13px;
+    padding:14px; font:inherit; font-weight:700; font-size:.95rem; cursor:pointer;
+  }
+  .ghostbtn{
+    display:block; width:calc(100% - 32px); margin:0 16px;
+    background:none; border:none; color:var(--green-700); font:inherit; font-weight:600;
+    font-size:.85rem; padding:10px; cursor:pointer;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:absolute; left:50%; transform:translateX(-50%) translateY(20px);
+    bottom:calc(96px + env(safe-area-inset-bottom)); z-index:20;
+    background:var(--green-900); color:#fff; font-size:.8rem; font-weight:600;
+    padding:10px 18px; border-radius:99px; opacity:0; pointer-events:none;
+    transition:opacity .25s, transform .25s;
+    max-width:85%; text-align:center;
+  }
+  .toast.bad{background:var(--red)}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="screens" id="screens">
+
+      <!-- ============ KORT ============ -->
+      <div class="scr active" id="scr-kort">
+        <div class="mapwrap" id="mapwrap">
+          <svg id="mapsvg" xmlns="http://www.w3.org/2000/svg" aria-label="Markkort">
+            <g id="lay-foto"></g>
+            <g id="lay-kort" style="display:none"></g>
+            <g id="lay-blokke"></g>
+            <g id="lay-egne"></g>
+            <g id="lay-hot"></g>
+            <g id="lay-gps"></g>
+          </svg>
+
+          <div class="map-top">
+            <button class="map-chip on" id="chip-blokke" onclick="toggleLayer('blokke',this)">Markblokke</button>
+            <button class="map-chip on" id="chip-foto" onclick="toggleLayer('foto',this)">Luftfoto</button>
+            <button class="map-chip on" id="chip-hot" onclick="toggleLayer('hot',this)">Hotspots</button>
+          </div>
+
+          <div class="zoombtns">
+            <button class="zoombtn" onclick="zoomStep(0.72)" aria-label="Zoom ind">+</button>
+            <button class="zoombtn" onclick="zoomStep(1.38)" aria-label="Zoom ud">−</button>
+          </div>
+
+          <div class="attr">Luftfoto © Esri/Maxar · Markblokke © Landbrugsstyrelsen 2026</div>
+
+          <div class="weathercard" onclick="toast('Vejrdata: demo — DMI-integration kommer i næste version')">
+            <div class="temp">14°</div>
+            <div class="wsub"><strong>Vind 3,4 m/s SV · 78 % RF</strong><br>DMI · Odense V · demo</div>
+            <span class="pill ok">OK til sprøjtning</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MARKER (list) ============ -->
+      <div class="scr" id="scr-marker">
+        <div class="apphead"><h2>Marker</h2><span class="pill info" id="totalha">–</span></div>
+        <div class="card" id="marklist"></div>
+        <button class="ghostbtn" onclick="toast('Kommer i næste version: tegn mark eller vælg markblok')">+ Tilføj mark fra markblok</button>
+      </div>
+
+      <!-- ============ MARK DETAIL ============ -->
+      <div class="scr" id="scr-markdetail">
+        <div class="apphead">
+          <button class="backbtn" onclick="go('scr-marker')">‹ Marker</button>
+        </div>
+        <div class="apphead" style="padding-top:0"><h2 id="md-name">–</h2><span class="pill ok" id="md-crop">–</span></div>
+        <div class="hero-stats">
+          <div class="stat"><div class="v" id="md-ha">–</div><div class="k">Hektar</div></div>
+          <div class="stat"><div class="v" id="md-blok">–</div><div class="k">Markblok</div></div>
+          <div class="stat"><div class="v" id="md-count">–</div><div class="k">Registr.</div></div>
+        </div>
+        <div class="sect-label">Dyrkningsjournal</div>
+        <div class="card" id="md-journal"></div>
+        <button class="ghostbtn" onclick="openSheet()">+ Ny registrering på denne mark</button>
+      </div>
+
+      <!-- ============ OPGAVER ============ -->
+      <div class="scr" id="scr-opgaver">
+        <div class="apphead"><h2>Opgaver</h2></div>
+        <div class="sect-label">I dag</div>
+        <div class="card">
+          <button class="row" onclick="toast('Opgavestyring kommer i næste version')">
+            <div class="swatch" style="background:var(--gold-soft); display:flex;align-items:center;justify-content:center">🚜</div>
+            <div class="grow"><div class="title">Svampesprøjtning – Åmarken</div><div class="sub">Propulse SE 250 · 0,45 l/ha · tildelt: dig</div></div>
+            <span class="pill warn">I dag</span>
+          </button>
+          <button class="row" onclick="toast('Opgavestyring kommer i næste version')">
+            <div class="swatch" style="background:var(--green-100); display:flex;align-items:center;justify-content:center">🌱</div>
+            <div class="grow"><div class="title">Eftersåning – Bakkelodden</div><div class="sub">Slætgræs, hjørne mod vejen · tildelt: Mikkel</div></div>
+            <span class="chev">›</span>
+          </button>
+        </div>
+        <div class="sect-label">Påmindelser</div>
+        <div class="card">
+          <div class="row" style="cursor:default">
+            <div class="swatch" style="background:#E1EAF3; display:flex;align-items:center;justify-content:center">🔔</div>
+            <div class="grow"><div class="title">Sprøjtefrist nærmer sig</div><div class="sub">Boxer må ikke anvendes i vinterhvede efter st. 29</div></div>
+          </div>
+          <div class="row" style="cursor:default">
+            <div class="swatch" style="background:#E1EAF3; display:flex;align-items:center;justify-content:center">💧</div>
+            <div class="grow"><div class="title">Vandingsregnskab</div><div class="sub">Åmarken: 28 mm siden 1. juli — husk registrering</div></div>
+          </div>
+        </div>
+        <button class="ghostbtn" onclick="toast('Opgavestyring kommer i næste version')">+ Ny opgave</button>
+      </div>
+
+      <!-- ============ MERE ============ -->
+      <div class="scr" id="scr-mere">
+        <div class="apphead"><h2>Mere</h2></div>
+        <div class="sect-label">Journal &amp; dokumentation</div>
+        <div class="card">
+          <button class="row" onclick="go('scr-sj')">
+            <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">📋</div>
+            <div class="grow"><div class="title">Sprøjtejournal</div><div class="sub">Lovpligtig journal · eksport til CSV</div></div><span class="chev">›</span>
+          </button>
+          <button class="row" onclick="toast('Kemilager kommer i næste version')">
+            <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">🧪</div>
+            <div class="grow"><div class="title">Kemilager</div><div class="sub">Beholdning justeres automatisk ved registrering</div></div><span class="chev">›</span>
+          </button>
+          <button class="row" onclick="toast('Udbytteregistrering kommer i næste version')">
+            <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">🌾</div>
+            <div class="grow"><div class="title">Udbytter</div><div class="sub">Registrér høst pr. mark eller pr. læs</div></div><span class="chev">›</span>
+          </button>
+        </div>
+        <div class="sect-label">Bedrift &amp; deling</div>
+        <div class="card">
+          <button class="row" onclick="toast('Fælles sky-data kommer i næste version — data gemmes lige nu kun på denne enhed')">
+            <div class="swatch" style="background:#E1EAF3;display:flex;align-items:center;justify-content:center">👥</div>
+            <div class="grow"><div class="title">Brugere på bedriften</div><div class="sub">Deling kræver sky-synkronisering (næste version)</div></div><span class="chev">›</span>
+          </button>
+          <button class="row" onclick="toast('Data gemmes lokalt i browseren på denne enhed')">
+            <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">💾</div>
+            <div class="grow"><div class="title">Datalagring</div><div class="sub">Gemmes lokalt · virker offline</div></div><span class="pill ok">Lokal</span>
+          </button>
+        </div>
+        <div class="sect-label">Opsætning</div>
+        <div class="card">
+          <button class="row" onclick="toast('Indstillinger kommer i næste version')">
+            <div class="swatch" style="background:#ECEDE6;display:flex;align-items:center;justify-content:center">⚙️</div>
+            <div class="grow"><div class="title">Indstillinger</div><div class="sub">Enheder, notifikationer, CVR, konto</div></div><span class="chev">›</span>
+          </button>
+          <button class="row" onclick="nulstil()">
+            <div class="swatch" style="background:var(--red-soft);display:flex;align-items:center;justify-content:center">🗑️</div>
+            <div class="grow"><div class="title">Nulstil til demodata</div><div class="sub">Sletter dine registreringer på denne enhed</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ SPRØJTEJOURNAL ============ -->
+      <div class="scr" id="scr-sj">
+        <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
+        <div class="apphead" style="padding-top:0"><h2>Sprøjtejournal</h2><span class="pill info">Sæson 25/26</span></div>
+        <div class="card" id="sj-list"></div>
+        <button class="bigbtn" onclick="eksportCSV()">Eksportér CSV</button>
+        <button class="ghostbtn" onclick="toast('PDF-eksport kommer i næste version — brug CSV indtil videre')">Eksportér PDF</button>
+      </div>
+    </div>
+
+    <!-- ============ REGISTRATION SHEET ============ -->
+    <div class="sheet-veil" id="veil">
+      <div class="sheet">
+        <div class="sheet-head">
+          <h3 id="sheet-title">Ny registrering</h3>
+          <button class="sheet-close" onclick="closeSheet()">✕</button>
+        </div>
+        <div class="sheet-body">
+          <!-- step 1: type -->
+          <div id="step-type">
+            <div class="typegrid">
+              <button class="typebtn" onclick="pickType('Sprøjtning')"><div class="ico">💦</div><div class="t">Sprøjtning</div><div class="d">Lovpligtig journal</div></button>
+              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🟤</div><div class="t">Gødskning</div><div class="d">Handels- &amp; husdyrgødning</div></button>
+              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🌱</div><div class="t">Såning</div><div class="d">Afgrøde &amp; udsædsmængde</div></button>
+              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🚜</div><div class="t">Jordbearbejdning</div><div class="d">Pløjning, harvning m.m.</div></button>
+              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">💧</div><div class="t">Vanding</div><div class="d">mm pr. mark</div></button>
+              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">📍</div><div class="t">Hotspot</div><div class="d">Sten, dræn, vildtskade …</div></button>
+            </div>
+          </div>
+
+          <!-- step 2: mark -->
+          <div id="step-mark" style="display:none">
+            <div class="sect-label">Vælg mark</div>
+            <div class="fieldchips" id="markchips"></div>
+          </div>
+
+          <!-- step 3: product -->
+          <div id="step-produkt" style="display:none">
+            <div class="sect-label">Vælg middel — opslag i middeldatabase</div>
+            <div class="search">🔍<input id="psearch" placeholder="Søg produkt eller aktivstof …" oninput="renderProducts()"></div>
+            <div class="card" id="plist" style="margin-top:0"></div>
+          </div>
+
+          <!-- step 4: details -->
+          <div id="step-detaljer" style="display:none">
+            <div class="sect-label">Detaljer</div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Mark</span><strong id="f-mark">–</strong></div>
+              <div class="formrow"><span class="lab">Middel</span><strong id="f-prod">–</strong></div>
+              <div class="formrow"><span class="lab">Dosering (l/ha)</span><input id="f-dose" value="0,45" inputmode="decimal"></div>
+              <div class="formrow"><span class="lab">Behandlet areal (ha)</span><input id="f-areal" inputmode="decimal"></div>
+              <div class="formrow"><span class="lab">Begrundelse</span><input id="f-begr" value="Septoria"></div>
+            </div>
+            <div class="sect-label">Vejr <span class="autotag">DEMO — DMI kommer i næste version</span></div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Vind</span><strong>3,4 m/s · SV</strong></div>
+              <div class="formrow"><span class="lab">Temperatur</span><strong>14 °C</strong></div>
+              <div class="formrow"><span class="lab">Afstand til vandløb</span><input value="≥ 10 m"></div>
+            </div>
+            <button class="bigbtn" id="savebtn" onclick="saveReg()">Gem registrering</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ============ TAB BAR ============ -->
+    <div class="tabbar">
+      <button class="tab active" data-scr="scr-kort" onclick="tabGo(this)">
+        <svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Kort
+      </button>
+      <button class="tab" data-scr="scr-marker" onclick="tabGo(this)">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Marker
+      </button>
+      <button class="tab-plus" onclick="openSheet()" aria-label="Ny registrering">+</button>
+      <button class="tab" data-scr="scr-opgaver" onclick="tabGo(this)">
+        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>Opgaver
+      </button>
+      <button class="tab" data-scr="scr-mere" onclick="tabGo(this)">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mere
+      </button>
+    </div>
+</div>
+
+<script>
+/* ===== Ægte kortdata (indsat af build-script) ===== */
+const FOTO_URI="__FOTO__";
+__BLOCKS__
+
+/* ===== Data & lokal lagring ===== */
+const DEFAULT_JOURNAL = {
+  m1:[
+    {d:"02.07.26", t:"Sprøjtning", txt:"Propulse SE 250 · 0,45 l/ha", c:"#C98F2B"},
+    {d:"14.05.26", t:"Gødskning", txt:"NS 27-4 · 180 kg/ha", c:"#8a6a4b"},
+    {d:"21.09.25", t:"Såning", txt:"KWS Extase · 165 kg/ha", c:"#3A7D44"},
+  ],
+  m3:[
+    {d:"18.04.26", t:"Sprøjtning", txt:"Mavrik Vita · 0,2 l/ha", c:"#C98F2B"},
+    {d:"28.08.25", t:"Såning", txt:"DK Exposé · 2,8 kg/ha", c:"#3A7D44"},
+  ],
+};
+const LS_KEY="markjournal-journal-v1";
+let JOURNAL;
+try{ JOURNAL = JSON.parse(localStorage.getItem(LS_KEY)) || structuredClone(DEFAULT_JOURNAL); }
+catch(e){ JOURNAL = structuredClone(DEFAULT_JOURNAL); }
+function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(JOURNAL)); }catch(e){} }
+function nulstil(){
+  if(confirm("Nulstil til demodata? Dine egne registreringer på denne enhed slettes.")){
+    JOURNAL = structuredClone(DEFAULT_JOURNAL); persist(); renderSJ();
+    toast("Nulstillet til demodata");
+    go("scr-mere");
+  }
+}
+
+const PRODUKTER = [
+  {navn:"Propulse SE 250", aktiv:"fluopyram + prothioconazol", afgroder:["Vinterhvede","Vinterraps"], ok:true},
+  {navn:"Boxer", aktiv:"prosulfocarb", afgroder:["Vinterhvede"], ok:true, note:"Kun efterår, st. 10–29"},
+  {navn:"Mavrik Vita", aktiv:"tau-fluvalinat", afgroder:["Vinterraps"], ok:true},
+  {navn:"Karate 2,5 WG", aktiv:"lambda-cyhalothrin", afgroder:[], ok:false, note:"Godkendelse udløbet"},
+  {navn:"Roundup Flex", aktiv:"glyphosat", afgroder:["Stub","Brak (MFO)"], ok:true},
+];
+
+let navCurrent="scr-kort", reg={}, currentMark="m1";
+
+function go(id){
+  document.querySelectorAll(".scr").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  navCurrent=id;
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.classList.toggle("active", t.dataset.scr===id);
+  });
+}
+function tabGo(btn){ go(btn.dataset.scr); }
+
+/* ===================== KORT-MOTOR ===================== */
+const SVG_NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById("mapsvg");
+const VB={x:100,y:120,w:640,h:640}; let RATIO=1;
+
+function el(tag,attrs){const e=document.createElementNS(SVG_NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+function buildMap(){
+  const img=el("image",{x:0,y:0,width:1000,height:1000,preserveAspectRatio:"none"});
+  img.setAttributeNS("http://www.w3.org/1999/xlink","href",FOTO_URI);
+  img.setAttribute("href",FOTO_URI);
+  document.getElementById("lay-foto").appendChild(img);
+
+  const gk=document.getElementById("lay-kort");
+  gk.appendChild(el("rect",{x:-200,y:-200,width:1400,height:1400,fill:"#EDEAE0"}));
+  BLOKKE.forEach(b=>{
+    gk.appendChild(el("path",{d:b.path,fill:"#DDE7C9",stroke:"#FFFFFF","stroke-width":2,"vector-effect":"non-scaling-stroke"}));
+  });
+
+  const gb=document.getElementById("lay-blokke");
+  BLOKKE.forEach(b=>{
+    gb.appendChild(el("path",{d:b.path,fill:"none",stroke:"#1c1c1c","stroke-width":3.2,"stroke-opacity":.55,"vector-effect":"non-scaling-stroke"}));
+    gb.appendChild(el("path",{d:b.path,fill:"none",stroke:"#FFD54A","stroke-width":1.6,"vector-effect":"non-scaling-stroke"}));
+  });
+
+  const ge=document.getElementById("lay-egne");
+  Object.entries(MARKER).forEach(([id,m])=>{
+    const p=el("path",{d:m.path,fill:m.farve,"fill-opacity":.5,stroke:"#FFFFFF","stroke-width":2.4,"vector-effect":"non-scaling-stroke","class":"field"});
+    p.dataset.mark=id;
+    ge.appendChild(p);
+    const t=el("text",{x:m.cx,y:m.cy,"text-anchor":"middle","font-size":22,"font-weight":700,fill:"#1e2417",stroke:"#ffffff","stroke-width":4,"paint-order":"stroke","pointer-events":"none","font-family":"-apple-system, sans-serif"});
+    t.textContent=m.navn;
+    const t2=el("text",{x:m.cx,y:m.cy+24,"text-anchor":"middle","font-size":17,"font-weight":500,fill:"#1e2417",stroke:"#ffffff","stroke-width":3.5,"paint-order":"stroke","pointer-events":"none","font-family":"-apple-system, sans-serif"});
+    t2.textContent=m.ha+" ha";
+    ge.appendChild(t); ge.appendChild(t2);
+  });
+
+  const gh=document.getElementById("lay-hot");
+  [[512,270],[560,760]].forEach(([x,y])=>{
+    gh.appendChild(el("circle",{cx:x,cy:y,r:9,fill:"#C98F2B",stroke:"#fff","stroke-width":3,"vector-effect":"non-scaling-stroke"}));
+  });
+
+  const gg=document.getElementById("lay-gps");
+  const halo=el("circle",{cx:470,cy:520,r:22,fill:"#3C6E9F",opacity:.25});
+  halo.classList.add("gps-dot");
+  gg.appendChild(halo);
+  gg.appendChild(el("circle",{cx:470,cy:520,r:8,fill:"#3C6E9F",stroke:"#fff","stroke-width":3.5,"vector-effect":"non-scaling-stroke"}));
+}
+
+function clampVB(){
+  const maxW=Math.min(1000,1000/RATIO);
+  VB.w=Math.min(Math.max(VB.w,90),maxW);
+  VB.h=VB.w*RATIO;
+  VB.x=Math.min(Math.max(VB.x,0),1000-VB.w);
+  VB.y=Math.min(Math.max(VB.y,0),1000-VB.h);
+}
+function applyVB(){ svg.setAttribute("viewBox",`${VB.x} ${VB.y} ${VB.w} ${VB.h}`); }
+
+function initMap(){
+  const r=document.getElementById("mapwrap").getBoundingClientRect();
+  RATIO=r.height/r.width;
+  const cx=430, cy=520;
+  VB.w=560; VB.h=VB.w*RATIO;
+  VB.x=cx-VB.w/2; VB.y=cy-VB.h/2;
+  clampVB(); applyVB();
+}
+
+function zoomStep(f){
+  const cx=VB.x+VB.w/2, cy=VB.y+VB.h/2;
+  VB.w*=f;
+  clampVB();
+  VB.x=cx-VB.w/2; VB.y=cy-VB.h/2;
+  clampVB(); applyVB();
+}
+
+/* træk-panorering (mus + touch) + pinch-zoom + hjul-zoom */
+let dragging=false, dragMoved=false, lastPt=null;
+const pointers=new Map();
+let pinchDist=0;
+
+svg.addEventListener("pointerdown",e=>{
+  pointers.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pointers.size===2){
+    const pts=[...pointers.values()];
+    pinchDist=Math.hypot(pts[0][0]-pts[1][0], pts[0][1]-pts[1][1]);
+  }
+  dragging=true; dragMoved=false; lastPt=[e.clientX,e.clientY];
+  svg.classList.add("dragging"); svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove",e=>{
+  if(!dragging) return;
+  pointers.set(e.pointerId,[e.clientX,e.clientY]);
+  const r=svg.getBoundingClientRect();
+  if(pointers.size===2){
+    const pts=[...pointers.values()];
+    const d=Math.hypot(pts[0][0]-pts[1][0], pts[0][1]-pts[1][1]);
+    if(pinchDist>0 && Math.abs(d-pinchDist)>2){
+      zoomStep(pinchDist/d);
+      pinchDist=d;
+      dragMoved=true;
+    }
+    return;
+  }
+  const dx=(e.clientX-lastPt[0])*(VB.w/r.width);
+  const dy=(e.clientY-lastPt[1])*(VB.h/r.height);
+  if(Math.abs(e.clientX-lastPt[0])+Math.abs(e.clientY-lastPt[1])>3) dragMoved=true;
+  VB.x-=dx; VB.y-=dy;
+  lastPt=[e.clientX,e.clientY];
+  clampVB(); applyVB();
+});
+["pointerup","pointercancel"].forEach(ev=>svg.addEventListener(ev,e=>{
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinchDist=0;
+  const wasDrag=dragMoved;
+  if(pointers.size===0){ dragging=false; svg.classList.remove("dragging"); dragMoved=false; }
+  if(ev==="pointerup" && !wasDrag && pointers.size===0){
+    try{ svg.releasePointerCapture(e.pointerId); }catch(err){}
+    const t=document.elementFromPoint(e.clientX,e.clientY);
+    if(t && t.classList && t.classList.contains("field")) openMark(t.dataset.mark);
+  }
+}));
+svg.addEventListener("wheel",e=>{
+  e.preventDefault();
+  zoomStep(e.deltaY>0?1.12:0.89);
+},{passive:false});
+
+function toggleLayer(name,chip){
+  chip.classList.toggle("on");
+  const on=chip.classList.contains("on");
+  if(name==="foto"){
+    document.getElementById("lay-foto").style.display = on ? "" : "none";
+    document.getElementById("lay-kort").style.display = on ? "none" : "";
+  }else{
+    document.getElementById("lay-"+(name==="blokke"?"blokke":"hot")).style.display = on ? "" : "none";
+  }
+}
+
+/* ===================== LISTER & FLOWS ===================== */
+const ml=document.getElementById("marklist");
+let totHa=0;
+Object.entries(MARKER).forEach(([id,m])=>{
+  totHa+=m.haNum;
+  const b=document.createElement("button"); b.className="row";
+  b.innerHTML=`<div class="swatch" style="background:${m.farve}"></div>
+    <div class="grow"><div class="title">${m.navn}</div><div class="sub">${m.afgrode} · markblok ${m.blok}</div></div>
+    <div class="end">${m.ha} ha</div><span class="chev">›</span>`;
+  b.onclick=()=>openMark(id);
+  ml.appendChild(b);
+});
+document.getElementById("totalha").textContent=totHa.toFixed(1).replace(".",",")+" ha i alt";
+
+function openMark(id){
+  const m=MARKER[id];
+  document.getElementById("md-name").textContent=m.navn;
+  document.getElementById("md-crop").textContent=m.afgrode;
+  document.getElementById("md-ha").textContent=m.ha;
+  document.getElementById("md-blok").textContent=m.blok;
+  const j=JOURNAL[id]||[];
+  document.getElementById("md-count").textContent=j.length;
+  const jl=document.getElementById("md-journal"); jl.innerHTML="";
+  if(!j.length){ jl.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen registreringer endnu — tryk + for at oprette.</div></div></div>`; }
+  j.forEach(e=>{
+    jl.innerHTML+=`<div class="row" style="cursor:default">
+      <div class="journal-dot" style="background:${e.c}"></div>
+      <div class="grow"><div class="title">${e.t}</div><div class="sub">${e.txt}</div></div>
+      <div class="end">${e.d}</div></div>`;
+  });
+  currentMark=id;
+  go("scr-markdetail");
+}
+
+function renderSJ(){
+  const list=document.getElementById("sj-list"); list.innerHTML="";
+  const rows=[];
+  Object.entries(JOURNAL).forEach(([id,arr])=>arr.filter(e=>e.t==="Sprøjtning").forEach(e=>rows.push({m:MARKER[id].navn,...e})));
+  if(!rows.length){ list.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen sprøjtninger registreret endnu.</div></div></div>`; }
+  rows.forEach(e=>{
+    list.innerHTML+=`<div class="row" style="cursor:default">
+      <div class="journal-dot" style="background:${e.c}"></div>
+      <div class="grow"><div class="title">${e.m}</div><div class="sub">${e.txt}</div></div>
+      <div class="end">${e.d}</div></div>`;
+  });
+}
+
+function eksportCSV(){
+  const rows=[["Dato","Mark","Markblok","Type","Detaljer"]];
+  Object.entries(JOURNAL).forEach(([id,arr])=>arr.forEach(e=>{
+    rows.push([e.d, MARKER[id].navn, MARKER[id].blok, e.t, e.txt]);
+  }));
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replaceAll('"','""')}"`).join(";")).join("\n");
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="markjournal.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("CSV downloadet ✓");
+}
+
+/* registrerings-flow */
+function openSheet(){
+  reg={};
+  document.getElementById("veil").classList.add("open");
+  showStep("type");
+  document.getElementById("sheet-title").textContent="Ny registrering";
+}
+function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
+function showStep(s){
+  ["type","mark","produkt","detaljer"].forEach(x=>{
+    document.getElementById("step-"+x).style.display = x===s ? "block":"none";
+  });
+}
+function pickType(t){
+  reg.type=t;
+  document.getElementById("sheet-title").textContent=t;
+  const mc=document.getElementById("markchips"); mc.innerHTML="";
+  Object.entries(MARKER).forEach(([id,m])=>{
+    const c=document.createElement("button"); c.className="fchip";
+    c.textContent=`${m.navn} · ${m.ha} ha`;
+    c.onclick=()=>{ reg.mark=id; mc.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel");
+      setTimeout(()=>{ showStep("produkt"); renderProducts(); },200); };
+    mc.appendChild(c);
+  });
+  showStep("mark");
+}
+function renderProducts(){
+  const q=(document.getElementById("psearch").value||"").toLowerCase();
+  const crop=MARKER[reg.mark].afgrode;
+  const list=document.getElementById("plist"); list.innerHTML="";
+  PRODUKTER.filter(p=>p.navn.toLowerCase().includes(q)||p.aktiv.toLowerCase().includes(q)).forEach(p=>{
+    const approved=p.ok && p.afgroder.includes(crop);
+    const pill = !p.ok ? `<span class="pill bad">Udgået</span>` :
+      approved ? `<span class="pill ok">Godkendt · ${crop}</span>` :
+      `<span class="pill warn">Ikke godkendt i ${crop}</span>`;
+    const b=document.createElement("button"); b.className="row";
+    b.innerHTML=`<div class="grow"><div class="title">${p.navn}</div><div class="sub">${p.aktiv}${p.note?" · "+p.note:""}</div></div>${pill}`;
+    b.onclick=()=>{
+      if(!p.ok){ toast(p.navn+": godkendelsen er udløbet — kan ikke vælges", true); return; }
+      if(!approved){ toast(`${p.navn} er ikke godkendt i ${crop} — kan ikke vælges`, true); return; }
+      reg.produkt=p.navn;
+      document.getElementById("f-mark").textContent=MARKER[reg.mark].navn;
+      document.getElementById("f-prod").textContent=p.navn;
+      document.getElementById("f-areal").value=MARKER[reg.mark].ha;
+      showStep("detaljer");
+    };
+    list.appendChild(b);
+  });
+}
+function idag(){
+  const n=new Date();
+  return `${String(n.getDate()).padStart(2,"0")}.${String(n.getMonth()+1).padStart(2,"0")}.${String(n.getFullYear()).slice(2)}`;
+}
+function saveReg(){
+  const m=reg.mark, dose=document.getElementById("f-dose").value;
+  if(!JOURNAL[m]) JOURNAL[m]=[];
+  JOURNAL[m].unshift({d:idag(), t:"Sprøjtning", txt:`${reg.produkt} · ${dose} l/ha`, c:"#C98F2B"});
+  persist();
+  renderSJ(); closeSheet();
+  toast("Registrering gemt ✓");
+  openMark(m);
+}
+
+/* toast */
+let toastTimer;
+function toast(msg,bad){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.toggle("bad",!!bad); t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
+}
+
+buildMap();
+renderSJ();
+requestAnimationFrame(initMap);
+window.addEventListener("resize",()=>{ initMap(); });
+
+/* PWA: offline-understøttelse */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
