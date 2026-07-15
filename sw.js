@@ -1,5 +1,8 @@
-const CACHE = "markjournal-v1";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest"];
+const CACHE = "markjournal-v2";
+const ASSETS = [
+  "./", "./index.html", "./manifest.webmanifest",
+  "./leaflet/leaflet.js", "./leaflet/leaflet.css",
+];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -12,9 +15,11 @@ self.addEventListener("activate", e => {
   );
 });
 
-// Netværk først, cache som fallback — så opdateringer slår igennem, men appen virker offline.
+// Kun appens egne filer caches (netværk først, cache som fallback).
+// Kort-tiles og vejr-API rammer altid nettet direkte.
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
