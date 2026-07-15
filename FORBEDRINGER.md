@@ -12,7 +12,7 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 3. Hotspots: opret på kortet med tryk-og-hold / knap, gem i localStorage, egne noter
 4. Registrér på flere marker på én gang (fx sprøjtning af 3 marker i træk)
 5. Sæson-vælger i journalen (25/26, 26/27 …) i stedet for fast tekst
-6. Opgaver: rigtige opgaver med localStorage (opret/afslut) i stedet for demo-indhold
+6. ~~Opgaver: rigtige opgaver med localStorage (opret/afslut)~~ ✅ iteration 6
 7. ~~PDF-eksport af sprøjtejournal (print-venlig side + window.print())~~ ✅ iteration 4
 8. Kemilager: simpel beholdning pr. middel, træk ved registrering
 9. Udbytte-oversigt pr. mark under "Mere → Udbytter" (data findes fra Høst-typen)
@@ -21,6 +21,14 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 6 (rigtige opgaver) — 15.07.26
+- ✅ Opgaver-fanen er nu ægte: opret (titel, note, valgfri mark), afkryds, slet — localStorage,
+  tæller-pill ("2 åbne"/"Alt klaret"), afsluttede vises overstreget nederst. Fuld livscyklus verificeret
+- ✅ Demo-påmindelserne fjernet (forvirrende fake-indhold)
+- ⚠️ Opgaver har ingen dato/frist — "i morgen"-planlægning kunne være næste niveau
+- ⚠️ En afsluttet sprøjte-opgave kunne tilbyde "registrér i journalen nu?" — stærk kobling
+- → Næste kandidater: sæson-filter i journal (#5), udbytte-oversigt (#9), hotspots på kort (#3)
 
 ### Iteration 5 (Indstillinger: bedriftsnavn + CVR) — 15.07.26
 - ✅ Mere → Indstillinger: bedriftsnavn og CVR gemmes lokalt og sættes automatisk ind i
