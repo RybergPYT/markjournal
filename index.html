@@ -264,6 +264,21 @@
   }
   .toast.bad{background:var(--red)}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  /* ---------- Print-rapport (sprøjtejournal til kontrol) ---------- */
+  #printRapport{display:none}
+  @media print{
+    body{background:#fff}
+    .app{display:none !important}
+    #printRapport{display:block; font-family:-apple-system, "Segoe UI", Roboto, sans-serif; color:#000; padding:8mm}
+    #printRapport h1{font-size:16pt; margin-bottom:2mm}
+    #printRapport .meta{font-size:9pt; color:#333; margin-bottom:6mm; line-height:1.6}
+    #printRapport table{width:100%; border-collapse:collapse; font-size:8.5pt}
+    #printRapport th, #printRapport td{border:1px solid #999; padding:1.5mm 2mm; text-align:left; vertical-align:top}
+    #printRapport th{background:#eee; font-weight:700}
+    #printRapport .fod{margin-top:8mm; font-size:8pt; color:#444; line-height:1.7}
+    #printRapport .underskrift{margin-top:12mm; border-top:1px solid #000; width:60mm; padding-top:1mm; font-size:8pt}
+  }
 </style>
 </head>
 <body>
@@ -412,8 +427,8 @@
         <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
         <div class="apphead" style="padding-top:0"><h2>Sprøjtejournal</h2><span class="pill info">Sæson 25/26</span></div>
         <div class="card" id="sj-list"></div>
-        <button class="bigbtn" onclick="eksportCSV()">Eksportér CSV</button>
-        <button class="ghostbtn" onclick="toast('PDF-eksport kommer i næste version — brug CSV indtil videre')">Eksportér PDF</button>
+        <button class="bigbtn" onclick="eksportPDF()">Gem / print som PDF</button>
+        <button class="ghostbtn" onclick="eksportCSV()">Eksportér CSV</button>
       </div>
     </div>
 
@@ -526,6 +541,9 @@
       </button>
     </div>
 </div>
+
+<!-- Print-rapport: usynlig i appen, vises kun ved print/PDF -->
+<div id="printRapport"></div>
 
 <script>
 /* ===== Egne marker: rigtige markblok-polygoner i WGS84 (Landbrugsstyrelsen) ===== */
@@ -1015,6 +1033,39 @@ function renderSJ(){
       <div class="grow"><div class="title">${e.m}</div><div class="sub">${e.txt}</div></div>
       <div class="end">${e.d}</div></div>`;
   });
+}
+
+function eksportPDF(){
+  const rows = [];
+  Object.entries(JOURNAL).forEach(([id, arr]) => {
+    if(!MARKER[id]) return;
+    arr.filter(e => e.t === "Sprøjtning").forEach(e => rows.push({m: MARKER[id], ...e}));
+  });
+  if(!rows.length){ toast("Ingen sprøjtninger at printe endnu"); return; }
+  /* nyeste øverst: dd.mm.yy → yymmdd til sortering */
+  const noegle = d => d.split(".").reverse().join("");
+  rows.sort((a, b) => noegle(b.d).localeCompare(noegle(a.d)));
+  const nu = new Date();
+  document.getElementById("printRapport").innerHTML = `
+    <h1>Sprøjtejournal</h1>
+    <div class="meta">
+      Bedrift: ______________________________ &nbsp; CVR: ______________<br>
+      Antal sprøjtninger: ${rows.length} · Udskrevet: ${idag()} kl. ${String(nu.getHours()).padStart(2,"0")}:${String(nu.getMinutes()).padStart(2,"0")} · Ført digitalt i Markjournal
+    </div>
+    <table>
+      <tr><th>Dato</th><th>Mark</th><th>Markblok</th><th>Afgrøde</th><th>Areal (ha)</th><th>Middel, dosering og vejr</th></tr>
+      ${rows.map(r => `<tr>
+        <td>${r.d}</td><td>${r.m.navn}</td><td>${r.m.blok}</td>
+        <td>${r.m.afgrode}</td><td>${r.m.ha}</td><td>${r.txt}</td>
+      </tr>`).join("")}
+    </table>
+    <div class="fod">
+      Sprøjtejournalen skal efter gældende regler opbevares i mindst 3 år og kunne
+      fremvises ved kontrolbesøg. Journalen er et hjælpeværktøj — den ansvarlige
+      jordbruger indestår selv for indholdets rigtighed.
+    </div>
+    <div class="underskrift">Dato og underskrift</div>`;
+  window.print();
 }
 
 function eksportCSV(){

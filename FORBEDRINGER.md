@@ -13,7 +13,7 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 4. Registrér på flere marker på én gang (fx sprøjtning af 3 marker i træk)
 5. Sæson-vælger i journalen (25/26, 26/27 …) i stedet for fast tekst
 6. Opgaver: rigtige opgaver med localStorage (opret/afslut) i stedet for demo-indhold
-7. PDF-eksport af sprøjtejournal (print-venlig side + window.print())
+7. ~~PDF-eksport af sprøjtejournal (print-venlig side + window.print())~~ ✅ iteration 4
 8. Kemilager: simpel beholdning pr. middel, træk ved registrering
 9. Udbytte-oversigt pr. mark under "Mere → Udbytter" (data findes fra Høst-typen)
 10. Middeldatabase: erstat demo-listen med Miljøstyrelsens BMD-udtræk (statisk JSON i repo)
@@ -21,6 +21,14 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 4 (print/PDF af sprøjtejournal) — 15.07.26
+- ✅ "Gem / print som PDF" bygger en kontrolklar rapport (dato, mark, blok, afgrøde, areal,
+  middel+dosering+vejr) sorteret nyeste først, med CVR/underskriftsfelter, og åbner print-dialogen
+  (på iPhone: Del → Gem som PDF). Verificeret med stubbet window.print + visuel inspektion
+- ⚠️ Bedrift/CVR er blanke linjer til håndudfyldning — burde hentes fra Indstillinger (som ikke findes endnu)
+  → tag "Indstillinger med bedriftsnavn/CVR" som del af næste iteration, så rapporten bliver helt færdig
+- ⚠️ Rapporten viser kun sprøjtninger; gødskning kunne med fordel få sin egen rapport senere
 
 ### Iteration 3 (slet/omdøb marker + slet registreringer) — 15.07.26
 - ✅ "Redigér"-knap på mark-siden: omdøb navn/afgrøde, slet mark (m. journal-advarsel);
