@@ -22,6 +22,13 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 5 (Indstillinger: bedriftsnavn + CVR) — 15.07.26
+- ✅ Mere → Indstillinger: bedriftsnavn og CVR gemmes lokalt og sættes automatisk ind i
+  PDF-rapporten (verificeret: værdier optræder i rapport-HTML + persistens)
+- ⚠️ Registrering kan stadig kun slettes, ikke redigeres — overvej redigér-flow
+- → Næste gode kandidater: opgaver med localStorage (#6), sæson-filter i journal (#5),
+  udbytte-oversigt (#9) eller hotspots på kortet (#3). Opgaver (#6) giver mest dagligdags-værdi
+
 ### Iteration 4 (print/PDF af sprøjtejournal) — 15.07.26
 - ✅ "Gem / print som PDF" bygger en kontrolklar rapport (dato, mark, blok, afgrøde, areal,
   middel+dosering+vejr) sorteret nyeste først, med CVR/underskriftsfelter, og åbner print-dialogen

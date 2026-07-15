@@ -411,9 +411,9 @@
         </div>
         <div class="sect-label">Opsætning</div>
         <div class="card">
-          <button class="row" onclick="toast('Indstillinger kommer i næste version')">
+          <button class="row" onclick="aabnIndstillinger()">
             <div class="swatch" style="background:#ECEDE6;display:flex;align-items:center;justify-content:center">⚙️</div>
-            <div class="grow"><div class="title">Indstillinger</div><div class="sub">Enheder, notifikationer, CVR, konto</div></div><span class="chev">›</span>
+            <div class="grow"><div class="title">Indstillinger</div><div class="sub">Bedriftsnavn og CVR — bruges i PDF-rapporten</div></div><span class="chev">›</span>
           </button>
           <button class="row" onclick="nulstil()">
             <div class="swatch" style="background:var(--red-soft);display:flex;align-items:center;justify-content:center">🗑️</div>
@@ -494,6 +494,17 @@
             <div class="sect-label">Detaljer</div>
             <div class="card" id="gen-fields"></div>
             <button class="bigbtn" onclick="saveGenerisk()">Gem registrering</button>
+          </div>
+
+          <!-- step: indstillinger -->
+          <div id="step-indstillinger" style="display:none">
+            <div class="sect-label">Bedrift</div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Bedriftsnavn</span><input id="ind-bedrift" placeholder="fx Rybergs Planteavl" style="width:170px"></div>
+              <div class="formrow"><span class="lab">CVR-nummer</span><input id="ind-cvr" placeholder="8 cifre" inputmode="numeric"></div>
+            </div>
+            <div class="sect-label">Oplysningerne gemmes kun på denne enhed og sættes automatisk ind i sprøjtejournal-rapporten.</div>
+            <button class="bigbtn" onclick="gemIndstillinger()">Gem</button>
           </div>
 
           <!-- step: redigér/slet eksisterende mark -->
@@ -1035,6 +1046,25 @@ function renderSJ(){
   });
 }
 
+/* ===================== INDSTILLINGER ===================== */
+const IND_LS = "markjournal-indstillinger-v1";
+let indstillinger = {bedrift:"", cvr:""};
+try{ indstillinger = JSON.parse(localStorage.getItem(IND_LS)) || indstillinger; }catch(e){}
+function aabnIndstillinger(){
+  document.getElementById("veil").classList.add("open");
+  document.getElementById("sheet-title").textContent = "Indstillinger";
+  document.getElementById("ind-bedrift").value = indstillinger.bedrift;
+  document.getElementById("ind-cvr").value = indstillinger.cvr;
+  showStep("indstillinger");
+}
+function gemIndstillinger(){
+  indstillinger.bedrift = document.getElementById("ind-bedrift").value.trim();
+  indstillinger.cvr = document.getElementById("ind-cvr").value.trim();
+  try{ localStorage.setItem(IND_LS, JSON.stringify(indstillinger)); }catch(e){}
+  closeSheet();
+  toast("Indstillinger gemt ✓");
+}
+
 function eksportPDF(){
   const rows = [];
   Object.entries(JOURNAL).forEach(([id, arr]) => {
@@ -1049,7 +1079,7 @@ function eksportPDF(){
   document.getElementById("printRapport").innerHTML = `
     <h1>Sprøjtejournal</h1>
     <div class="meta">
-      Bedrift: ______________________________ &nbsp; CVR: ______________<br>
+      Bedrift: ${indstillinger.bedrift || "______________________________"} &nbsp; CVR: ${indstillinger.cvr || "______________"}<br>
       Antal sprøjtninger: ${rows.length} · Udskrevet: ${idag()} kl. ${String(nu.getHours()).padStart(2,"0")}:${String(nu.getMinutes()).padStart(2,"0")} · Ført digitalt i Markjournal
     </div>
     <table>
@@ -1092,7 +1122,7 @@ function openSheet(){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer","generisk","nymark","redigermark"].forEach(x=>{
+  ["type","mark","produkt","detaljer","generisk","nymark","redigermark","indstillinger"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }
