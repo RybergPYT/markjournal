@@ -323,7 +323,7 @@
         <div class="apphead">
           <button class="backbtn" onclick="go('scr-marker')">‹ Marker</button>
         </div>
-        <div class="apphead" style="padding-top:0"><h2 id="md-name">–</h2><span class="pill ok" id="md-crop">–</span></div>
+        <div class="apphead" style="padding-top:0"><h2 id="md-name">–</h2><span class="pill ok" id="md-crop">–</span><button class="backbtn" onclick="aabnRedigerMark()">Redigér</button></div>
         <div class="hero-stats">
           <div class="stat"><div class="v" id="md-ha">–</div><div class="k">Hektar</div></div>
           <div class="stat"><div class="v" id="md-blok">–</div><div class="k">Markblok</div></div>
@@ -476,6 +476,17 @@
             <button class="bigbtn" onclick="saveGenerisk()">Gem registrering</button>
           </div>
 
+          <!-- step: redigér/slet eksisterende mark -->
+          <div id="step-redigermark" style="display:none">
+            <div class="sect-label">Redigér mark</div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Navn</span><input id="rm-navn"></div>
+              <div class="formrow"><span class="lab">Afgrøde</span><input id="rm-afgrode"></div>
+            </div>
+            <button class="bigbtn" onclick="gemMarkAendring()">Gem ændringer</button>
+            <button class="ghostbtn" style="color:var(--red)" onclick="sletMark()">Slet mark …</button>
+          </div>
+
           <!-- step: navngiv ny mark -->
           <div id="step-nymark" style="display:none">
             <div class="sect-label">Ny mark</div>
@@ -546,6 +557,16 @@ try{ ekstraMarker = JSON.parse(localStorage.getItem(MARKS_LS)) || []; }catch(e){
 ekstraMarker.forEach(em => {
   MARKER[em.id] = {...em, ha: em.haNum.toFixed(1).replace(".", ",")};
 });
+
+/* Tilpasninger af demomarker: omdøbninger og sletninger gemmes lokalt */
+const TILPAS_LS = "markjournal-tilpasninger-v1";
+let tilpas = {omdoebt:{}, skjulte:[]};
+try{ tilpas = JSON.parse(localStorage.getItem(TILPAS_LS)) || tilpas; }catch(e){}
+tilpas.skjulte.forEach(id => delete MARKER[id]);
+Object.entries(tilpas.omdoebt).forEach(([id, o]) => {
+  if(MARKER[id]){ MARKER[id].navn = o.navn; MARKER[id].afgrode = o.afgrode; }
+});
+function gemTilpas(){ try{ localStorage.setItem(TILPAS_LS, JSON.stringify(tilpas)); }catch(e){} }
 const FARVEPALET = ["#c9b36a","#b9c77a","#e8d44d","#7d9a54","#c2a95e","#9aa984","#a8c78a","#d4b06a"];
 
 /* ===== Data & lokal lagring ===== */
@@ -805,6 +826,57 @@ function gemNyMark(){
   openMark(id);
 }
 
+/* ===================== REDIGÉR / SLET MARK & REGISTRERING ===================== */
+function aabnRedigerMark(){
+  const m = MARKER[currentMark];
+  document.getElementById("veil").classList.add("open");
+  document.getElementById("sheet-title").textContent = m.navn;
+  document.getElementById("rm-navn").value = m.navn;
+  document.getElementById("rm-afgrode").value = m.afgrode;
+  showStep("redigermark");
+}
+function gemMarkAendring(){
+  const m = MARKER[currentMark];
+  m.navn = document.getElementById("rm-navn").value.trim() || m.navn;
+  m.afgrode = document.getElementById("rm-afgrode").value.trim() || m.afgrode;
+  const ekstra = ekstraMarker.find(e => e.id === currentMark);
+  if(ekstra){ ekstra.navn = m.navn; ekstra.afgrode = m.afgrode;
+    try{ localStorage.setItem(MARKS_LS, JSON.stringify(ekstraMarker)); }catch(e){} }
+  else { tilpas.omdoebt[currentMark] = {navn:m.navn, afgrode:m.afgrode}; gemTilpas(); }
+  /* gentegn kort-label */
+  if(m._lag){ egneLag.removeLayer(m._lag); }
+  tegnMarkLag(currentMark); opdaterLabels();
+  renderMarkList();
+  closeSheet();
+  toast("Mark opdateret ✓");
+  openMark(currentMark);
+}
+function sletMark(){
+  const m = MARKER[currentMark];
+  const antal = (JOURNAL[currentMark] || []).length;
+  const advarsel = antal ? ` og dens ${antal} registrering${antal===1?"":"er"}` : "";
+  if(!confirm(`Slet ${m.navn} (${m.ha} ha)${advarsel}? Dette kan ikke fortrydes.`)) return;
+  if(m._lag) egneLag.removeLayer(m._lag);
+  delete MARKER[currentMark];
+  delete JOURNAL[currentMark]; persist();
+  const idx = ekstraMarker.findIndex(e => e.id === currentMark);
+  if(idx >= 0){ ekstraMarker.splice(idx, 1);
+    try{ localStorage.setItem(MARKS_LS, JSON.stringify(ekstraMarker)); }catch(e){} }
+  else { tilpas.skjulte.push(currentMark); gemTilpas(); }
+  renderMarkList(); renderSJ();
+  closeSheet();
+  toast(m.navn + " slettet");
+  go("scr-marker");
+}
+function sletRegistrering(idx){
+  const e = JOURNAL[currentMark][idx];
+  if(!confirm(`Slet registreringen "${e.t}: ${e.txt}" fra ${e.d}?`)) return;
+  JOURNAL[currentMark].splice(idx, 1); persist();
+  renderSJ();
+  toast("Registrering slettet");
+  openMark(currentMark);
+}
+
 /* ===================== ADRESSESØGNING (DAWA) ===================== */
 function aabnSoeg(){
   document.getElementById("soegOverlay").style.display = "block";
@@ -917,11 +989,11 @@ function openMark(id){
   document.getElementById("md-count").textContent=j.length;
   const jl=document.getElementById("md-journal"); jl.innerHTML="";
   if(!j.length){ jl.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen registreringer endnu — tryk + for at oprette.</div></div></div>`; }
-  j.forEach(e=>{
-    jl.innerHTML+=`<div class="row" style="cursor:default">
+  j.forEach((e, idx)=>{
+    jl.innerHTML+=`<button class="row" onclick="sletRegistrering(${idx})" title="Tryk for at slette">
       <div class="journal-dot" style="background:${e.c}"></div>
       <div class="grow"><div class="title">${e.t}</div><div class="sub">${e.txt}</div></div>
-      <div class="end">${e.d}</div></div>`;
+      <div class="end">${e.d}</div><span class="chev">✕</span></button>`;
   });
   currentMark=id;
   go("scr-markdetail");
@@ -930,7 +1002,7 @@ function openMark(id){
 function renderSJ(){
   const list=document.getElementById("sj-list"); list.innerHTML="";
   const rows=[];
-  Object.entries(JOURNAL).forEach(([id,arr])=>arr.filter(e=>e.t==="Sprøjtning").forEach(e=>rows.push({m:MARKER[id].navn,...e})));
+  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return; arr.filter(e=>e.t==="Sprøjtning").forEach(e=>rows.push({m:MARKER[id].navn,...e})); });
   if(!rows.length){ list.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen sprøjtninger registreret endnu.</div></div></div>`; }
   rows.forEach(e=>{
     list.innerHTML+=`<div class="row" style="cursor:default">
@@ -942,9 +1014,9 @@ function renderSJ(){
 
 function eksportCSV(){
   const rows=[["Dato","Mark","Markblok","Type","Detaljer"]];
-  Object.entries(JOURNAL).forEach(([id,arr])=>arr.forEach(e=>{
+  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return; arr.forEach(e=>{
     rows.push([e.d, MARKER[id].navn, MARKER[id].blok, e.t, e.txt]);
-  }));
+  }); });
   const csv=rows.map(r=>r.map(c=>`"${String(c).replaceAll('"','""')}"`).join(";")).join("\n");
   const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a");
@@ -964,7 +1036,7 @@ function openSheet(){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer","generisk","nymark"].forEach(x=>{
+  ["type","mark","produkt","detaljer","generisk","nymark","redigermark"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }

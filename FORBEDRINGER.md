@@ -8,7 +8,7 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 1. ~~Alle registreringstyper (gødskning, såning, jordbearbejdning, vanding, høst)~~ ✅ iteration 1
 1b. ~~SØRENS ØNSKER: adressesøgning + tilføj mark fra markblok + tegn egen mark~~ ✅ iteration 2
-2. Slet/redigér en registrering OG slet/omdøb en mark (tap → handlingsark) — VIGTIGST NU: man kan oprette marker men aldrig fjerne dem igen!
+2. ~~Slet/redigér en registrering OG slet/omdøb en mark~~ ✅ iteration 3
 3. Hotspots: opret på kortet med tryk-og-hold / knap, gem i localStorage, egne noter
 4. Registrér på flere marker på én gang (fx sprøjtning af 3 marker i træk)
 5. Sæson-vælger i journalen (25/26, 26/27 …) i stedet for fast tekst
@@ -21,6 +21,14 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 3 (slet/omdøb marker + slet registreringer) — 15.07.26
+- ✅ "Redigér"-knap på mark-siden: omdøb navn/afgrøde, slet mark (m. journal-advarsel);
+  demomarker skjules via tilpasnings-lag, egne marker fjernes helt. Verificeret på tværs af genindlæsning
+- ✅ Tryk på journal-række → bekræft → slet. Guards i sprøjtejournal/CSV mod slettede marker
+- ⚠️ Sletning bruger window.confirm — fungerer, men et pænt dansk bekræftelses-ark ville være bedre UX
+- ⚠️ Journal-rækken viser ✕ men intet "redigér" — redigering af en registrering mangler stadig (kun slet+opret-ny)
+- → Næste: opgaver med localStorage (backlog #6) eller print-venlig PDF (#7); PDF er nok mest værdifuld til kontrolbesøg
 
 ### Iteration 2 (Sørens ønsker: adressesøgning, mark fra markblok, tegn mark) — 15.07.26
 - ✅ DAWA-adressesøgning (gratis, ingen nøgle), WFS-punktopslag med akse-fallback,
