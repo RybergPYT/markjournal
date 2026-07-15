@@ -395,11 +395,11 @@
           <div id="step-type">
             <div class="typegrid">
               <button class="typebtn" onclick="pickType('Sprøjtning')"><div class="ico">💦</div><div class="t">Sprøjtning</div><div class="d">Lovpligtig journal</div></button>
-              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🟤</div><div class="t">Gødskning</div><div class="d">Handels- &amp; husdyrgødning</div></button>
-              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🌱</div><div class="t">Såning</div><div class="d">Afgrøde &amp; udsædsmængde</div></button>
-              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">🚜</div><div class="t">Jordbearbejdning</div><div class="d">Pløjning, harvning m.m.</div></button>
-              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">💧</div><div class="t">Vanding</div><div class="d">mm pr. mark</div></button>
-              <button class="typebtn" onclick="toast('Kommer i næste version — prøv Sprøjtning')"><div class="ico">📍</div><div class="t">Hotspot</div><div class="d">Sten, dræn, vildtskade …</div></button>
+              <button class="typebtn" onclick="pickType('Gødskning')"><div class="ico">🟤</div><div class="t">Gødskning</div><div class="d">Handels- &amp; husdyrgødning</div></button>
+              <button class="typebtn" onclick="pickType('Såning')"><div class="ico">🌱</div><div class="t">Såning</div><div class="d">Afgrøde &amp; udsædsmængde</div></button>
+              <button class="typebtn" onclick="pickType('Jordbearbejdning')"><div class="ico">🚜</div><div class="t">Jordbearbejdning</div><div class="d">Pløjning, harvning m.m.</div></button>
+              <button class="typebtn" onclick="pickType('Vanding')"><div class="ico">💧</div><div class="t">Vanding</div><div class="d">mm pr. mark</div></button>
+              <button class="typebtn" onclick="pickType('Høst')"><div class="ico">🌾</div><div class="t">Høst</div><div class="d">Udbytte pr. mark</div></button>
             </div>
           </div>
 
@@ -433,6 +433,13 @@
               <div class="formrow"><span class="lab">Afstand til vandløb</span><input value="≥ 10 m"></div>
             </div>
             <button class="bigbtn" id="savebtn" onclick="saveReg()">Gem registrering</button>
+          </div>
+
+          <!-- step 4b: generic details (alle andre typer end sprøjtning) -->
+          <div id="step-generisk" style="display:none">
+            <div class="sect-label">Detaljer</div>
+            <div class="card" id="gen-fields"></div>
+            <button class="bigbtn" onclick="saveGenerisk()">Gem registrering</button>
           </div>
         </div>
       </div>
@@ -727,9 +734,55 @@ function openSheet(){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer"].forEach(x=>{
+  ["type","mark","produkt","detaljer","generisk"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
+}
+
+/* Typer ud over sprøjtning: felter og journaltekst */
+const TYPEDEF = {
+  "Gødskning": {c:"#8a6a4b", felter:[
+    {id:"g-prod",  lab:"Gødning",          val:()=>"NS 27-4"},
+    {id:"g-mgd",   lab:"Mængde (kg/ha)",   val:()=>"180", num:true},
+    {id:"g-areal", lab:"Areal (ha)",       val:m=>m.ha, num:true},
+  ], txt:v=>`${v["g-prod"]} · ${v["g-mgd"]} kg/ha`},
+  "Såning": {c:"#3A7D44", felter:[
+    {id:"s-sort", lab:"Afgrøde/sort",      val:m=>m.afgrode},
+    {id:"s-mgd",  lab:"Udsæd (kg/ha)",     val:()=>"165", num:true},
+  ], txt:v=>`${v["s-sort"]} · ${v["s-mgd"]} kg/ha`},
+  "Jordbearbejdning": {c:"#7a6f5a", felter:[
+    {id:"j-handling", lab:"Handling",      val:()=>"Pløjning"},
+    {id:"j-note",     lab:"Note (valgfri)", val:()=>""},
+  ], txt:v=>v["j-handling"] + (v["j-note"] ? ` · ${v["j-note"]}` : "")},
+  "Vanding": {c:"#3C6E9F", felter:[
+    {id:"v-mm",    lab:"Vandmængde (mm)",  val:()=>"25", num:true},
+    {id:"v-areal", lab:"Areal (ha)",       val:m=>m.ha, num:true},
+  ], txt:v=>`${v["v-mm"]} mm`},
+  "Høst": {c:"#C9A227", felter:[
+    {id:"h-udb",  lab:"Udbytte (t/ha)",    val:()=>"", num:true},
+    {id:"h-vand", lab:"Vandprocent (%)",   val:()=>"", num:true},
+  ], txt:v=>`${v["h-udb"] || "?"} t/ha` + (v["h-vand"] ? ` · ${v["h-vand"]} % vand` : "")},
+};
+
+function buildGenerisk(){
+  const def = TYPEDEF[reg.type], m = MARKER[reg.mark];
+  const c = document.getElementById("gen-fields");
+  c.innerHTML = `<div class="formrow"><span class="lab">Mark</span><strong>${m.navn} · ${m.ha} ha</strong></div>`;
+  def.felter.forEach(f=>{
+    c.innerHTML += `<div class="formrow"><span class="lab">${f.lab}</span>
+      <input id="${f.id}" value="${f.val(m)}"${f.num ? ' inputmode="decimal"' : ''}></div>`;
+  });
+}
+function saveGenerisk(){
+  const def = TYPEDEF[reg.type], m = reg.mark;
+  const v = {};
+  def.felter.forEach(f=>{ v[f.id] = document.getElementById(f.id).value.trim(); });
+  if(!JOURNAL[m]) JOURNAL[m]=[];
+  JOURNAL[m].unshift({d:idag(), t:reg.type, txt:def.txt(v), c:def.c});
+  persist();
+  renderSJ(); closeSheet();
+  toast("Registrering gemt ✓");
+  openMark(m);
 }
 function pickType(t){
   reg.type=t;
@@ -739,7 +792,10 @@ function pickType(t){
     const c=document.createElement("button"); c.className="fchip";
     c.textContent=`${m.navn} · ${m.ha} ha`;
     c.onclick=()=>{ reg.mark=id; mc.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel");
-      setTimeout(()=>{ showStep("produkt"); renderProducts(); },200); };
+      setTimeout(()=>{
+        if(reg.type==="Sprøjtning"){ showStep("produkt"); renderProducts(); }
+        else { buildGenerisk(); showStep("generisk"); }
+      },200); };
     mc.appendChild(c);
   });
   showStep("mark");
