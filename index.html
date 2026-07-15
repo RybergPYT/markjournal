@@ -164,6 +164,24 @@
   }
   .marklabel .lha{font-weight:500; font-size:.68rem}
   .marklabel::before{display:none}
+  .soeg-overlay{
+    position:absolute; inset:0; z-index:950;
+    background:rgba(22,26,21,.4);
+    padding:calc(12px + env(safe-area-inset-top)) 12px 0;
+  }
+  .soeg-box .search{background:var(--card); box-shadow:0 6px 18px rgba(20,26,18,.25)}
+  .mapmode{
+    position:absolute; left:12px; right:12px; bottom:96px; z-index:940;
+    background:var(--green-900); color:#fff; border-radius:14px;
+    padding:10px 14px; font-size:.78rem; font-weight:600;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    box-shadow:0 6px 18px rgba(20,26,18,.3);
+  }
+  .mapmode button{
+    background:rgba(255,255,255,.14); color:#fff;
+    border:1px solid rgba(255,255,255,.4); border-radius:99px;
+    padding:6px 12px; font:inherit; font-size:.72rem; font-weight:600; cursor:pointer;
+  }
 
   /* ---------- Mark detail ---------- */
   .hero-stats{display:flex; gap:8px; margin:0 16px 10px}
@@ -258,9 +276,24 @@
           <div id="map"></div>
 
           <div class="map-top">
+            <button class="map-chip" onclick="aabnSoeg()" aria-label="Søg adresse">🔍</button>
             <button class="map-chip on" id="chip-blokke" onclick="toggleLayer('blokke',this)">Markblokke</button>
             <button class="map-chip on" id="chip-foto" onclick="toggleLayer('foto',this)">Luftfoto</button>
             <button class="map-chip on" id="chip-hot" onclick="toggleLayer('hot',this)">Hotspots</button>
+          </div>
+
+          <div class="soeg-overlay" id="soegOverlay" style="display:none" onclick="if(event.target===this)lukSoeg()">
+            <div class="soeg-box">
+              <div class="search" style="margin:0 0 8px">🔍<input id="soegInput" placeholder="Søg adresse, fx Bogensevej 12 …" oninput="soegAdresse()"><button class="sheet-close" onclick="lukSoeg()">✕</button></div>
+              <div class="card" style="margin:0" id="soegResultater"></div>
+            </div>
+          </div>
+
+          <div class="mapmode" id="mapMode" style="display:none">
+            <span id="mapModeTekst" style="flex:1">–</span>
+            <button id="mmFortryd" onclick="tegnFortrydPunkt()">Fortryd punkt</button>
+            <button id="mmFaerdig" onclick="tegnFaerdig()">Færdig</button>
+            <button onclick="afbrydMapMode()">Annullér</button>
           </div>
 
           <div class="zoombtns">
@@ -281,7 +314,8 @@
       <div class="scr" id="scr-marker">
         <div class="apphead"><h2>Marker</h2><span class="pill info" id="totalha">–</span></div>
         <div class="card" id="marklist"></div>
-        <button class="ghostbtn" onclick="toast('Kommer i næste version: tegn mark eller vælg markblok')">+ Tilføj mark fra markblok</button>
+        <button class="ghostbtn" onclick="startVaelgBlok()">+ Tilføj mark fra markblok</button>
+        <button class="ghostbtn" onclick="startTegn()">✏️ Tegn egen mark på kortet</button>
       </div>
 
       <!-- ============ MARK DETAIL ============ -->
@@ -441,6 +475,18 @@
             <div class="card" id="gen-fields"></div>
             <button class="bigbtn" onclick="saveGenerisk()">Gem registrering</button>
           </div>
+
+          <!-- step: navngiv ny mark -->
+          <div id="step-nymark" style="display:none">
+            <div class="sect-label">Ny mark</div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Markblok</span><strong id="nm-blok">–</strong></div>
+              <div class="formrow"><span class="lab">Areal</span><strong id="nm-ha">–</strong></div>
+              <div class="formrow"><span class="lab">Navn</span><input id="nm-navn" placeholder="fx Kirkemarken"></div>
+              <div class="formrow"><span class="lab">Afgrøde</span><input id="nm-afgrode" value="Vinterhvede"></div>
+            </div>
+            <button class="bigbtn" onclick="gemNyMark()">Opret mark</button>
+          </div>
         </div>
       </div>
     </div>
@@ -493,6 +539,15 @@ EGNE_GEOJSON.features.forEach(f => {
   };
 });
 
+/* Brugerens egne tilføjede marker (fra markblok-valg eller tegning) */
+const MARKS_LS = "markjournal-marker-v1";
+let ekstraMarker = [];
+try{ ekstraMarker = JSON.parse(localStorage.getItem(MARKS_LS)) || []; }catch(e){}
+ekstraMarker.forEach(em => {
+  MARKER[em.id] = {...em, ha: em.haNum.toFixed(1).replace(".", ",")};
+});
+const FARVEPALET = ["#c9b36a","#b9c77a","#e8d44d","#7d9a54","#c2a95e","#9aa984","#a8c78a","#d4b06a"];
+
 /* ===== Data & lokal lagring ===== */
 const DEFAULT_JOURNAL = {
   m1:[
@@ -540,21 +595,23 @@ function go(id){
 function tabGo(btn){ go(btn.dataset.scr); }
 
 /* ===================== LEAFLET-KORT ===================== */
-const egneLag = L.geoJSON(EGNE_GEOJSON, {
-  style: f => {
-    const cfg = MARK_CONFIG[f.properties.MARKBLOKNR] || {};
-    return {color:"#FFFFFF", weight:2.5, fillColor:cfg.farve||"#8fae5f", fillOpacity:.45};
-  },
-  onEachFeature: (f, lag) => {
-    const cfg = MARK_CONFIG[f.properties.MARKBLOKNR];
-    if(!cfg) return;
-    const m = MARKER[cfg.id];
-    lag.bindTooltip(`${m.navn}<br><span class="lha">${m.ha} ha</span>`,
-      {permanent:true, direction:"center", className:"marklabel"});
-    lag.on("click", () => openMark(cfg.id));
-  }
-});
-const bedriftBounds = egneLag.getBounds();
+const egneLag = L.layerGroup();
+function tegnMarkLag(id){
+  const m = MARKER[id];
+  const gj = L.geoJSON(m.feature, {style:{color:"#FFFFFF", weight:2.5, fillColor:m.farve, fillOpacity:.45}});
+  gj.bindTooltip(`${m.navn}<br><span class="lha">${m.ha} ha</span>`,
+    {permanent:true, direction:"center", className:"marklabel"});
+  gj.on("click", () => { if(!mapMode) openMark(id); });
+  gj.addTo(egneLag);
+  m._lag = gj;
+}
+Object.keys(MARKER).forEach(tegnMarkLag);
+
+function bedriftOmraade(){
+  let b = null;
+  egneLag.eachLayer(l => { const lb = l.getBounds(); b = b ? b.extend(lb) : L.latLngBounds(lb.getSouthWest(), lb.getNorthEast()); });
+  return b;
+}
 
 const fotoLag = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
   maxZoom: 19, attribution: "Luftfoto © Esri/Maxar"
@@ -574,7 +631,14 @@ const kort = L.map("map", {
   attributionControl: true,
 });
 kort.attributionControl.setPrefix("Vejr: DMI/Open-Meteo");
-kort.fitBounds(bedriftBounds.pad(0.15));
+kort.fitBounds(bedriftOmraade().pad(0.15));
+
+/* kort-tilstande: vælg markblok eller tegn egen mark */
+let mapMode = null; // null | "blok" | "tegn"
+kort.on("click", e => {
+  if(mapMode === "blok") vaelgBlokVedPunkt(e.latlng);
+  else if(mapMode === "tegn") tegnTilfoejPunkt(e.latlng);
+});
 
 /* hotspots: placeret i Nørremarken og Åmarken */
 [["m1","Sten"],["m3","Drænbrønd"]].forEach(([id, navn]) => {
@@ -604,7 +668,7 @@ function toggleLayer(name, chip){
   else  { kort.removeLayer(fotoLag);   vejkortLag.addTo(kort); }
   blokkeLag.bringToFront && blokkeLag.bringToFront();
 }
-function hjemTilBedrift(){ kort.fitBounds(bedriftBounds.pad(0.15)); }
+function hjemTilBedrift(){ kort.fitBounds(bedriftOmraade().pad(0.15)); }
 
 /* marknavne vises kun når man er zoomet tæt på */
 function opdaterLabels(){
@@ -613,6 +677,168 @@ function opdaterLabels(){
 }
 kort.on("zoomend", opdaterLabels);
 opdaterLabels();
+
+/* ===================== NY MARK: VÆLG MARKBLOK ELLER TEGN ===================== */
+let nyMarkKladde = null;
+
+function visMode(tekst, medTegneknapper){
+  document.getElementById("mapModeTekst").textContent = tekst;
+  document.getElementById("mmFortryd").style.display = medTegneknapper ? "" : "none";
+  document.getElementById("mmFaerdig").style.display = medTegneknapper ? "" : "none";
+  document.getElementById("mapMode").style.display = "flex";
+}
+function afbrydMapMode(){
+  mapMode = null;
+  document.getElementById("mapMode").style.display = "none";
+  if(tegnLag){ kort.removeLayer(tegnLag); tegnLag = null; }
+  tegnPunkter = [];
+}
+function startVaelgBlok(){
+  go("scr-kort"); mapMode = "blok";
+  visMode("Tryk på den markblok, du vil tilføje som mark", false);
+}
+function startTegn(){
+  go("scr-kort"); mapMode = "tegn"; tegnPunkter = [];
+  visMode("Tryk på kortet og sæt punkter langs markens kant", true);
+}
+
+/* --- markblok-opslag ved tryk (WFS, prøver begge akse-rækkefølger) --- */
+async function hentWFS(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(r.status);
+  return (await r.json()).features || [];
+}
+function punktIRing(pt, ring){
+  let inde = false;
+  for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+    const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+    if(((yi>pt[1]) !== (yj>pt[1])) && (pt[0] < (xj-xi)*(pt[1]-yi)/(yj-yi)+xi)) inde = !inde;
+  }
+  return inde;
+}
+function punktIFeature(pt, f){
+  const g = f.geometry;
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+  return polys.some(rings => punktIRing(pt, rings[0]) && !rings.slice(1).some(h => punktIRing(pt, h)));
+}
+async function vaelgBlokVedPunkt(ll){
+  toast("Henter markblok …");
+  const d = 0.0012;
+  const base = "https://geodata.fvm.dk/geoserver/Markblokke/wfs?service=WFS&version=2.0.0&request=GetFeature"
+    + "&typeNames=Markblokke:Markblokke_2026&srsName=EPSG:4326&outputFormat=application/json&count=10&bbox=";
+  try{
+    let fs = await hentWFS(base + `${ll.lat-d},${ll.lng-d},${ll.lat+d},${ll.lng+d},EPSG:4326`);
+    if(!fs.length) fs = await hentWFS(base + `${ll.lng-d},${ll.lat-d},${ll.lng+d},${ll.lat+d},EPSG:4326`);
+    const f = fs.find(x => punktIFeature([ll.lng, ll.lat], x)) || fs[0];
+    if(!f){ toast("Ingen markblok her — prøv at trykke midt i en mark", true); return; }
+    if(Object.values(MARKER).some(m => m.blok === f.properties.MARKBLOKNR)){
+      toast("Markblok " + f.properties.MARKBLOKNR + " er allerede tilføjet", true); return;
+    }
+    afbrydMapMode();
+    nyMarkKladde = {
+      blok: f.properties.MARKBLOKNR,
+      haNum: Math.round(f.properties.GB_AREAL * 100) / 100,
+      feature: {type:"Feature", properties:{MARKBLOKNR:f.properties.MARKBLOKNR, GB_AREAL:f.properties.GB_AREAL}, geometry:f.geometry},
+    };
+    aabnNyMarkSheet();
+  }catch(e){ toast("Kunne ikke hente markblok — tjek internetforbindelsen", true); }
+}
+
+/* --- tegn egen mark --- */
+let tegnPunkter = [], tegnLag = null;
+function tegnTilfoejPunkt(ll){ tegnPunkter.push(ll); tegnOpdater(); }
+function tegnOpdater(){
+  if(tegnLag) kort.removeLayer(tegnLag);
+  if(!tegnPunkter.length) return;
+  tegnLag = L.polygon(tegnPunkter, {color:"#fff", dashArray:"6 6", weight:2.5, fillColor:"#e8d44d", fillOpacity:.3}).addTo(kort);
+}
+function tegnFortrydPunkt(){ tegnPunkter.pop(); tegnOpdater(); }
+function ringAreaHa(pts){
+  const R = 6378137;
+  let a = 0;
+  for(let i=0; i<pts.length; i++){
+    const p1 = pts[i], p2 = pts[(i+1) % pts.length];
+    a += (p2.lng - p1.lng) * Math.PI/180 * (2 + Math.sin(p1.lat*Math.PI/180) + Math.sin(p2.lat*Math.PI/180));
+  }
+  return Math.abs(a * R * R / 2) / 10000;
+}
+function tegnFaerdig(){
+  if(tegnPunkter.length < 3){ toast("Sæt mindst 3 punkter langs kanten", true); return; }
+  const ha = Math.round(ringAreaHa(tegnPunkter) * 100) / 100;
+  const ring = tegnPunkter.concat([tegnPunkter[0]]).map(p => [p.lng, p.lat]);
+  nyMarkKladde = {
+    blok: "egen tegning", haNum: ha,
+    feature: {type:"Feature", properties:{MARKBLOKNR:"egen tegning", GB_AREAL:ha}, geometry:{type:"Polygon", coordinates:[ring]}},
+  };
+  afbrydMapMode();
+  aabnNyMarkSheet();
+}
+
+/* --- navngiv og gem ny mark --- */
+function aabnNyMarkSheet(){
+  document.getElementById("veil").classList.add("open");
+  document.getElementById("sheet-title").textContent = "Ny mark";
+  document.getElementById("nm-blok").textContent = nyMarkKladde.blok;
+  document.getElementById("nm-ha").textContent = nyMarkKladde.haNum.toFixed(1).replace(".", ",") + " ha";
+  document.getElementById("nm-navn").value = "";
+  showStep("nymark");
+}
+function gemNyMark(){
+  if(!nyMarkKladde) return; // dublet-vagt: forhindrer dobbelt-tryk på "Opret mark"
+  const kladde = nyMarkKladde; nyMarkKladde = null;
+  const navn = document.getElementById("nm-navn").value.trim() || ("Mark " + (Object.keys(MARKER).length + 1));
+  const afgrode = document.getElementById("nm-afgrode").value.trim() || "Ukendt";
+  const id = "m" + Date.now();
+  const em = {
+    id, navn, afgrode,
+    farve: FARVEPALET[Object.keys(MARKER).length % FARVEPALET.length],
+    blok: kladde.blok, haNum: kladde.haNum, feature: kladde.feature,
+  };
+  ekstraMarker.push(em);
+  try{ localStorage.setItem(MARKS_LS, JSON.stringify(ekstraMarker)); }catch(e){}
+  MARKER[id] = {...em, ha: em.haNum.toFixed(1).replace(".", ",")};
+  tegnMarkLag(id);
+  renderMarkList();
+  opdaterLabels();
+  closeSheet();
+  toast(navn + " oprettet ✓");
+  openMark(id);
+}
+
+/* ===================== ADRESSESØGNING (DAWA) ===================== */
+function aabnSoeg(){
+  document.getElementById("soegOverlay").style.display = "block";
+  const inp = document.getElementById("soegInput");
+  inp.value = ""; document.getElementById("soegResultater").innerHTML = "";
+  setTimeout(()=>inp.focus(), 50);
+}
+function lukSoeg(){ document.getElementById("soegOverlay").style.display = "none"; }
+let soegTimer;
+function soegAdresse(){
+  clearTimeout(soegTimer);
+  soegTimer = setTimeout(async () => {
+    const q = document.getElementById("soegInput").value.trim();
+    const res = document.getElementById("soegResultater");
+    if(q.length < 3){ res.innerHTML = ""; return; }
+    try{
+      const r = await fetch("https://api.dataforsyningen.dk/autocomplete?q=" + encodeURIComponent(q) + "&fuzzy=");
+      const d = await r.json();
+      res.innerHTML = "";
+      d.slice(0, 6).forEach(a => {
+        const b = document.createElement("button"); b.className = "row";
+        b.innerHTML = `<div class="grow"><div class="title" style="font-weight:500">${a.forslagstekst || a.tekst}</div></div><span class="chev">›</span>`;
+        b.onclick = () => {
+          if(a.data && a.data.x && a.data.y){ lukSoeg(); kort.setView([a.data.y, a.data.x], 16); }
+          else { document.getElementById("soegInput").value = a.tekst; soegAdresse(); }
+        };
+        res.appendChild(b);
+      });
+      if(!d.length) res.innerHTML = `<div class="row" style="cursor:default"><div class="sub">Ingen adresser fundet</div></div>`;
+    }catch(e){
+      res.innerHTML = `<div class="row" style="cursor:default"><div class="sub">Søgning fejlede — tjek internetforbindelsen</div></div>`;
+    }
+  }, 250);
+}
 function visPaaKort(){
   go("scr-kort");
   const m = MARKER[currentMark];
@@ -624,7 +850,7 @@ const KOMPAS = ["N","NNØ","NØ","ØNØ","Ø","ØSØ","SØ","SSØ","S","SSV","SV
 let vejr = null;
 
 async function hentVejr(){
-  const c = bedriftBounds.getCenter();
+  const c = bedriftOmraade().getCenter();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat.toFixed(3)}&longitude=${c.lng.toFixed(3)}`
     + `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation`
     + `&wind_speed_unit=ms&timezone=Europe/Copenhagen&models=dmi_seamless`;
@@ -664,18 +890,22 @@ hentVejr();
 setInterval(hentVejr, 15*60*1000);
 
 /* ===================== LISTER & FLOWS ===================== */
-const ml=document.getElementById("marklist");
-let totHa=0;
-Object.entries(MARKER).forEach(([id,m])=>{
-  totHa+=m.haNum;
-  const b=document.createElement("button"); b.className="row";
-  b.innerHTML=`<div class="swatch" style="background:${m.farve}"></div>
-    <div class="grow"><div class="title">${m.navn}</div><div class="sub">${m.afgrode} · markblok ${m.blok}</div></div>
-    <div class="end">${m.ha} ha</div><span class="chev">›</span>`;
-  b.onclick=()=>openMark(id);
-  ml.appendChild(b);
-});
-document.getElementById("totalha").textContent=totHa.toFixed(1).replace(".",",")+" ha i alt";
+function renderMarkList(){
+  const ml=document.getElementById("marklist");
+  ml.innerHTML="";
+  let totHa=0;
+  Object.entries(MARKER).forEach(([id,m])=>{
+    totHa+=m.haNum;
+    const b=document.createElement("button"); b.className="row";
+    b.innerHTML=`<div class="swatch" style="background:${m.farve}"></div>
+      <div class="grow"><div class="title">${m.navn}</div><div class="sub">${m.afgrode} · markblok ${m.blok}</div></div>
+      <div class="end">${m.ha} ha</div><span class="chev">›</span>`;
+    b.onclick=()=>openMark(id);
+    ml.appendChild(b);
+  });
+  document.getElementById("totalha").textContent=totHa.toFixed(1).replace(".",",")+" ha i alt";
+}
+renderMarkList();
 
 function openMark(id){
   const m=MARKER[id];
@@ -734,7 +964,7 @@ function openSheet(){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer","generisk"].forEach(x=>{
+  ["type","mark","produkt","detaljer","generisk","nymark"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }
