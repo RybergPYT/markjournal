@@ -15,12 +15,20 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 6. ~~Opgaver: rigtige opgaver med localStorage (opret/afslut)~~ ✅ iteration 6
 7. ~~PDF-eksport af sprøjtejournal (print-venlig side + window.print())~~ ✅ iteration 4
 8. Kemilager: simpel beholdning pr. middel, træk ved registrering
-9. Udbytte-oversigt pr. mark under "Mere → Udbytter" (data findes fra Høst-typen)
+9. ~~Udbytte-oversigt pr. mark under "Mere → Udbytter"~~ ✅ iteration 7
 10. Middeldatabase: erstat demo-listen med Miljøstyrelsens BMD-udtræk (statisk JSON i repo)
 11. Onboarding: første gang appen åbnes → kort guide (3 skærme)
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 7 (udbytte-oversigt) — 15.07.26
+- ✅ Mere → Udbytter er nu en rigtig side: høst-registreringer pr. mark, nyeste først,
+  med automatisk t/ha × ha = samlet tons pr. mark og totalsum i pill'en.
+  Beregning verificeret mod manuelt regnestykke (202 t)
+- ⚠️ Ingen sæson-opdeling — når to års høst ligger i samme liste, bliver totalen misvisende.
+  Sæson-filter (#5) er nu den vigtigste manglende brik og bør tages næste gang
+- ⚠️ Udbytte pr. afgrøde (fx alle hvedemarker samlet) kunne være næste niveau
 
 ### Iteration 6 (rigtige opgaver) — 15.07.26
 - ✅ Opgaver-fanen er nu ægte: opret (titel, note, valgfri mark), afkryds, slet — localStorage,

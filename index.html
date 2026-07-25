@@ -373,9 +373,9 @@
             <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">🧪</div>
             <div class="grow"><div class="title">Kemilager</div><div class="sub">Beholdning justeres automatisk ved registrering</div></div><span class="chev">›</span>
           </button>
-          <button class="row" onclick="toast('Udbytteregistrering kommer i næste version')">
+          <button class="row" onclick="renderUdbytte(); go('scr-udbytte')">
             <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">🌾</div>
-            <div class="grow"><div class="title">Udbytter</div><div class="sub">Registrér høst pr. mark eller pr. læs</div></div><span class="chev">›</span>
+            <div class="grow"><div class="title">Udbytter</div><div class="sub">Oversigt over høstede marker og samlet høst</div></div><span class="chev">›</span>
           </button>
         </div>
         <div class="sect-label">Bedrift &amp; deling</div>
@@ -400,6 +400,14 @@
             <div class="grow"><div class="title">Nulstil til demodata</div><div class="sub">Sletter dine registreringer på denne enhed</div></div>
           </button>
         </div>
+      </div>
+
+      <!-- ============ UDBYTTER ============ -->
+      <div class="scr" id="scr-udbytte">
+        <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
+        <div class="apphead" style="padding-top:0"><h2>Udbytter</h2><span class="pill info" id="udb-total">–</span></div>
+        <div class="card" id="udb-list"></div>
+        <button class="ghostbtn" onclick="openSheet()">+ Registrér høst</button>
       </div>
 
       <!-- ============ SPRØJTEJOURNAL ============ -->
@@ -1055,6 +1063,35 @@ function gemIndstillinger(){
   try{ localStorage.setItem(IND_LS, JSON.stringify(indstillinger)); }catch(e){}
   closeSheet();
   toast("Indstillinger gemt ✓");
+}
+
+/* ===================== UDBYTTE-OVERSIGT ===================== */
+function renderUdbytte(){
+  const rows = [];
+  Object.entries(JOURNAL).forEach(([id, arr]) => {
+    if(!MARKER[id]) return;
+    arr.filter(e => e.t === "Høst").forEach(e => {
+      const m = MARKER[id];
+      const match = e.txt.match(/^([\d.,]+) t\/ha/);
+      const tha = match ? parseFloat(match[1].replace(",", ".")) : null;
+      rows.push({m, d: e.d, txt: e.txt, tha, total: tha ? tha * m.haNum : null});
+    });
+  });
+  const noegle = d => d.split(".").reverse().join("");
+  rows.sort((a, b) => noegle(b.d).localeCompare(noegle(a.d)));
+  const list = document.getElementById("udb-list");
+  if(!rows.length){
+    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen høst-registreringer endnu — tryk "+ Registrér høst" og vælg Høst.</div></div></div>`;
+    document.getElementById("udb-total").textContent = "Ingen høst endnu";
+    return;
+  }
+  list.innerHTML = rows.map(r => `<div class="row" style="cursor:default">
+    <div class="swatch" style="background:${r.m.farve}"></div>
+    <div class="grow"><div class="title">${r.m.navn}</div>
+      <div class="sub">${r.m.afgrode} · ${r.txt}${r.total ? ` · i alt ≈ ${dk(r.total, 0)} t` : ""}</div></div>
+    <div class="end">${r.d}</div></div>`).join("");
+  const sumT = rows.reduce((s, r) => s + (r.total || 0), 0);
+  document.getElementById("udb-total").textContent = sumT ? "≈ " + dk(sumT, 0) + " t i alt" : rows.length + " høstet";
 }
 
 /* ===================== OPGAVER ===================== */
