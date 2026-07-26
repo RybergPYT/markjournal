@@ -342,6 +342,7 @@
             <button class="zoombtn" onclick="kort.zoomIn()" aria-label="Zoom ind">+</button>
             <button class="zoombtn" onclick="kort.zoomOut()" aria-label="Zoom ud">−</button>
             <button class="zoombtn" onclick="hjemTilBedrift()" aria-label="Til bedriften" style="font-size:.85rem">⌂</button>
+            <button class="zoombtn" id="gpsKnap" onclick="findMigPaaKortet()" aria-label="Brug min GPS-position" style="font-size:.95rem">◎</button>
           </div>
 
           <div class="weathercard" onclick="visVejrInfo()">
@@ -879,14 +880,72 @@ function sletHotspot(id){
 }
 tegnHotspots();
 
-/* GPS-position hvis brugeren tillader det */
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(p => {
-    L.circleMarker([p.coords.latitude, p.coords.longitude], {
-      radius:8, color:"#fff", weight:3, fillColor:"#3C6E9F", fillOpacity:1
-    }).bindTooltip("Din position").addTo(kort);
-  }, ()=>{}, {enableHighAccuracy:false, timeout:8000});
+/* ===================== MIN GPS-POSITION ===================== */
+let migLag = null, migFoelger = false, migVagt = null;
+
+function saetMigPaaKort(p, zoom){
+  const ll = L.latLng(p.coords.latitude, p.coords.longitude);
+  const noej = Math.round(p.coords.accuracy || 0);
+  if(!migLag){
+    migLag = L.layerGroup().addTo(kort);
+    migLag.cirkel = L.circle(ll, {radius: noej, color:"#3C6E9F", weight:1, fillColor:"#3C6E9F", fillOpacity:.12}).addTo(migLag);
+    migLag.prik = L.circleMarker(ll, {radius:8, color:"#fff", weight:3, fillColor:"#3C6E9F", fillOpacity:1}).addTo(migLag);
+  }else{
+    migLag.cirkel.setLatLng(ll).setRadius(noej);
+    migLag.prik.setLatLng(ll);
+  }
+  migLag.prik.bindTooltip(`Din position · ±${noej} m`);
+  if(zoom) kort.setView(ll, Math.max(kort.getZoom(), 17));
+  return {ll, noej};
 }
+
+/* Hvilken af mine marker står jeg på? */
+function markVedPunkt(ll){
+  for(const [id, m] of Object.entries(MARKER)){
+    if(punktIFeature([ll.lng, ll.lat], m.feature)) return id;
+  }
+  return null;
+}
+
+function findMigPaaKortet(){
+  if(!navigator.geolocation){ toast("Din telefon deler ikke position", true); return; }
+  go("scr-kort");
+  const knap = document.getElementById("gpsKnap");
+  knap.textContent = "…";
+  toast("Finder din position …");
+  navigator.geolocation.getCurrentPosition(
+    p => {
+      knap.textContent = "◎";
+      const {ll, noej} = saetMigPaaKort(p, true);
+      const id = markVedPunkt(ll);
+      if(id) toast(`Du står på ${MARKER[id].navn} · ±${noej} m`);
+      else toast(`Din position · ±${noej} m — ikke på en af dine marker`);
+      startFoelgMig();
+    },
+    err => {
+      knap.textContent = "◎";
+      toast(err.code === 1
+        ? "Giv appen lov til at bruge din position i telefonens indstillinger"
+        : "Kunne ikke finde din position — prøv igen udendørs", true);
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:5000}
+  );
+}
+
+/* Følg positionen mens man kører — stopper automatisk efter 5 min for at spare batteri */
+function startFoelgMig(){
+  if(migFoelger || !navigator.geolocation) return;
+  migFoelger = navigator.geolocation.watchPosition(
+    p => saetMigPaaKort(p, false), () => {},
+    {enableHighAccuracy:true, maximumAge:5000}
+  );
+  clearTimeout(migVagt);
+  migVagt = setTimeout(stopFoelgMig, 5 * 60 * 1000);
+}
+function stopFoelgMig(){
+  if(migFoelger){ navigator.geolocation.clearWatch(migFoelger); migFoelger = false; }
+}
+document.addEventListener("visibilitychange", () => { if(document.hidden) stopFoelgMig(); });
 
 function toggleLayer(name, chip){
   chip.classList.toggle("on");

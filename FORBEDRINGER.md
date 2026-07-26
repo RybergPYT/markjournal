@@ -25,6 +25,16 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 13 (min GPS-position — Sørens ønske) — 26.07.26
+- ✅ ◎-knap på kortet: finder din position, zoomer derhen, viser blå prik med
+  nøjagtighedscirkel (±m) og siger HVILKEN af dine marker du står på (punkt-i-polygon).
+  Følger positionen mens du kører, men stopper efter 5 min og når appen lukkes (batteri)
+- ✅ Position hentes nu først når man trykker — ingen tilladelses-prompt ved opstart
+- ✅ Verificeret: inde i mark → "Du står på Bakkelodden ±6 m"; udenfor → korrekt besked;
+  afvist tilladelse og timeout giver hver sin brugbare fejlbesked
+- ⚠️ "Du står på X" kunne tilbyde en genvej: "Registrér på Bakkelodden nu" — stærk kobling
+- ⚠️ Ingen visuel markering af at følge-tilstanden er aktiv
+
 ### Iteration 12 (sikkerhedskopi og gendannelse) — 26.07.26
 - ✅ Mere → "Gem sikkerhedskopi": alle 6 datanøgler i én JSON-fil med dato i filnavnet;
   "Gendan fra sikkerhedskopi" med bekræftelse der viser dato + antal registreringer.
