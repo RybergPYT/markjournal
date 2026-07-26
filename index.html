@@ -415,10 +415,15 @@
             <div class="swatch" style="background:#E1EAF3;display:flex;align-items:center;justify-content:center">👥</div>
             <div class="grow"><div class="title">Brugere på bedriften</div><div class="sub">Deling kræver sky-synkronisering (næste version)</div></div><span class="chev">›</span>
           </button>
-          <button class="row" onclick="toast('Data gemmes lokalt i browseren på denne enhed')">
+          <button class="row" onclick="gemBackup()">
             <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">💾</div>
-            <div class="grow"><div class="title">Datalagring</div><div class="sub">Gemmes lokalt · virker offline</div></div><span class="pill ok">Lokal</span>
+            <div class="grow"><div class="title">Gem sikkerhedskopi</div><div class="sub" id="backup-sub">Læg filen i iCloud eller send den til dig selv</div></div><span class="chev">›</span>
           </button>
+          <button class="row" onclick="document.getElementById('backup-fil').click()">
+            <div class="swatch" style="background:#E1EAF3;display:flex;align-items:center;justify-content:center">📥</div>
+            <div class="grow"><div class="title">Gendan fra sikkerhedskopi</div><div class="sub">Flytter alt over på en ny telefon</div></div><span class="chev">›</span>
+          </button>
+          <input type="file" id="backup-fil" accept="application/json,.json" style="display:none" onchange="laesBackup(this)">
         </div>
         <div class="sect-label">Opsætning</div>
         <div class="card">
@@ -1225,6 +1230,73 @@ function renderSJ(){
       <div class="end">${e.d}</div></div>`;
   });
 }
+
+/* ===================== SIKKERHEDSKOPI ===================== */
+const BACKUP_LS = "markjournal-sidste-backup-v1";
+/* Nøglerne skrives direkte, så rækkefølgen i filen ikke kan bryde backup'en */
+const BACKUP_NOEGLER = [
+  "markjournal-journal-v1",        // registreringer
+  "markjournal-marker-v1",         // egne marker
+  "markjournal-tilpasninger-v1",   // omdøbte/skjulte marker
+  "markjournal-opgaver-v1",        // opgaver
+  "markjournal-hotspots-v1",       // markeringer på kortet
+  "markjournal-indstillinger-v1",  // bedrift og CVR
+];
+
+function backupData(){
+  const data = {app:"Markjournal", version:1, gemt: new Date().toISOString(), indhold:{}};
+  BACKUP_NOEGLER.forEach(n => { const v = localStorage.getItem(n); if(v !== null) data.indhold[n] = v; });
+  return data;
+}
+function gemBackup(){
+  const data = backupData();
+  const antal = Object.values(JOURNAL).reduce((s, a) => s + a.length, 0);
+  const blob = new Blob([JSON.stringify(data, null, 1)], {type:"application/json"});
+  const nu = new Date();
+  const stempel = `${nu.getFullYear()}-${String(nu.getMonth()+1).padStart(2,"0")}-${String(nu.getDate()).padStart(2,"0")}`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `markjournal-sikkerhedskopi-${stempel}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  try{ localStorage.setItem(BACKUP_LS, idag()); }catch(e){}
+  visSidsteBackup();
+  toast(`Sikkerhedskopi gemt ✓ (${antal} registreringer)`);
+}
+function visSidsteBackup(){
+  const s = document.getElementById("backup-sub"); if(!s) return;
+  let sidst = null;
+  try{ sidst = localStorage.getItem(BACKUP_LS); }catch(e){}
+  s.textContent = sidst ? "Sidste kopi: " + sidst : "Læg filen i iCloud eller send den til dig selv";
+}
+function laesBackup(input){
+  const fil = input.files && input.files[0];
+  input.value = "";
+  if(!fil) return;
+  const l = new FileReader();
+  l.onload = () => {
+    let data;
+    try{ data = JSON.parse(l.result); }catch(e){ toast("Filen kunne ikke læses — er det den rigtige fil?", true); return; }
+    if(!data || data.app !== "Markjournal" || !data.indhold){
+      toast("Det ser ikke ud til at være en Markjournal-sikkerhedskopi", true); return;
+    }
+    let antal = 0;
+    try{
+      const j = JSON.parse(data.indhold[LS_KEY] || "{}");
+      antal = Object.values(j).reduce((s, a) => s + a.length, 0);
+    }catch(e){}
+    const dato = data.gemt ? new Date(data.gemt).toLocaleDateString("da-DK") : "ukendt dato";
+    if(!confirm(`Gendan sikkerhedskopi fra ${dato} med ${antal} registreringer?\n\nAlt på denne telefon erstattes.`)) return;
+    BACKUP_NOEGLER.forEach(n => {
+      if(data.indhold[n] !== undefined) localStorage.setItem(n, data.indhold[n]);
+      else localStorage.removeItem(n);
+    });
+    toast("Gendannet ✓ — genindlæser appen");
+    setTimeout(() => location.reload(), 1200);
+  };
+  l.readAsText(fil);
+}
+visSidsteBackup();
 
 /* ===================== INDSTILLINGER ===================== */
 const IND_LS = "markjournal-indstillinger-v1";

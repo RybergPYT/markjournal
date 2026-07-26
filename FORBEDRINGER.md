@@ -6,6 +6,9 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Backlog (prioriteret)
 
+**Top 3 vurdering (26.07.26):** 1) ~~sikkerhedskopi~~ ✅ it. 12 · 2) rigtig middeldatabase (BMD) ·
+3) flere marker på én registrering. Kemilager nedprioriteret.
+
 1. ~~Alle registreringstyper (gødskning, såning, jordbearbejdning, vanding, høst)~~ ✅ iteration 1
 1b. ~~SØRENS ØNSKER: adressesøgning + tilføj mark fra markblok + tegn egen mark~~ ✅ iteration 2
 2. ~~Slet/redigér en registrering OG slet/omdøb en mark~~ ✅ iteration 3
@@ -21,6 +24,17 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 12 (sikkerhedskopi og gendannelse) — 26.07.26
+- ✅ Mere → "Gem sikkerhedskopi": alle 6 datanøgler i én JSON-fil med dato i filnavnet;
+  "Gendan fra sikkerhedskopi" med bekræftelse der viser dato + antal registreringer.
+  Datoen for sidste kopi vises i menuen som påmindelse
+- ✅ Fanget alvorlig fejl før deploy: BACKUP_NOEGLER refererede konstanter defineret senere i filen
+  (temporal dead zone) → ville sprænge hele appen ved start. Nøglenavnene skrives nu direkte
+- ✅ Verificeret: fuld cyklus gem → localStorage.clear() → gendan giver alt tilbage;
+  ugyldige og fremmede filer afvises uden at røre eksisterende data
+- ⚠️ Ingen automatisk påmindelse om at tage backup — kunne advare hvis sidste kopi er > 30 dage
+- ⚠️ Backup er manuel; brugeren skal selv lægge filen et sikkert sted (bevidst — ingen sky endnu)
 
 ### Iteration 11 (GPS-hotspot + hotspot-liste) — 26.07.26
 - ✅ "📍 Her hvor jeg står"-knap i hotspot-tilstand: bruger telefonens GPS, zoomer derhen og
