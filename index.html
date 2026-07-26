@@ -265,6 +265,22 @@
   .toast.bad{background:var(--red)}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
+  /* ---------- Onboarding ---------- */
+  .onb{
+    position:absolute; inset:0; z-index:2000;
+    background:var(--app-bg); display:none;
+    flex-direction:column; text-align:center;
+    padding:calc(28px + env(safe-area-inset-top)) 26px calc(20px + env(safe-area-inset-bottom));
+  }
+  .onb.open{display:flex}
+  .onb-ikon{font-size:3.6rem; margin:auto auto .4rem}
+  .onb h2{font-size:1.45rem; letter-spacing:-.02em; margin-bottom:10px}
+  .onb p{font-size:.95rem; line-height:1.55; color:var(--muted); margin:0 auto 6px; max-width:24em}
+  .onb .onb-bund{margin-top:auto; display:flex; flex-direction:column; gap:6px}
+  .onb-prikker{display:flex; gap:7px; justify-content:center; margin:18px 0 14px}
+  .onb-prikker i{width:7px; height:7px; border-radius:50%; background:var(--line); display:block}
+  .onb-prikker i.on{background:var(--green-700); width:20px; border-radius:99px}
+
   /* ---------- Print-rapport (sprøjtejournal til kontrol) ---------- */
   #printRapport{display:none}
   @media print{
@@ -394,6 +410,10 @@
           <button class="row" onclick="aabnIndstillinger()">
             <div class="swatch" style="background:#ECEDE6;display:flex;align-items:center;justify-content:center">⚙️</div>
             <div class="grow"><div class="title">Indstillinger</div><div class="sub">Bedriftsnavn og CVR — bruges i PDF-rapporten</div></div><span class="chev">›</span>
+          </button>
+          <button class="row" onclick="onbStart()">
+            <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">❓</div>
+            <div class="grow"><div class="title">Sådan bruger du appen</div><div class="sub">Vis introduktionen igen</div></div><span class="chev">›</span>
           </button>
           <button class="row" onclick="nulstil()">
             <div class="swatch" style="background:var(--red-soft);display:flex;align-items:center;justify-content:center">🗑️</div>
@@ -537,6 +557,18 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- ============ ONBOARDING ============ -->
+    <div class="onb" id="onb">
+      <div class="onb-ikon" id="onb-ikon">🌾</div>
+      <h2 id="onb-titel">–</h2>
+      <p id="onb-tekst">–</p>
+      <div class="onb-bund">
+        <div class="onb-prikker" id="onb-prikker"></div>
+        <button class="bigbtn" style="width:100%; margin:0" onclick="onbNaeste()" id="onb-knap">Videre</button>
+        <button class="ghostbtn" style="width:100%; margin:0" onclick="onbLuk()" id="onb-spring">Spring over</button>
+      </div>
+    </div>
+
     <!-- ============ TAB BAR ============ -->
     <div class="tabbar">
       <button class="tab active" data-scr="scr-kort" onclick="tabGo(this)">
@@ -647,7 +679,7 @@ function go(id){
   document.querySelectorAll(".tab").forEach(t=>{
     t.classList.toggle("active", t.dataset.scr===id);
   });
-  if(id==="scr-kort" && window.kort){ setTimeout(()=>kort.invalidateSize(), 60); }
+  if(id==="scr-kort" && typeof kort !== "undefined"){ setTimeout(()=>kort.invalidateSize(), 60); }
 }
 function tabGo(btn){ go(btn.dataset.scr); }
 
@@ -1385,6 +1417,47 @@ function toast(msg,bad){
 }
 
 renderSJ();
+
+/* ===================== ONBOARDING (vises første gang) ===================== */
+const ONB_LS = "markjournal-onboarding-set-v1";
+const ONB_TRIN = [
+  {ikon:"🌾", titel:"Velkommen til Markjournal",
+   tekst:"Din markstyring og lovpligtige sprøjtejournal — direkte i lommen. Alt gemmes på din telefon og virker også uden dækning ude i marken."},
+  {ikon:"🗺️", titel:"Find dine marker",
+   tekst:"Kortet viser luftfoto og alle Danmarks markblokke fra Landbrugsstyrelsen. Søg din adresse med luppen, og tryk på en mark for at åbne dens journal."},
+  {ikon:"➕", titel:"Registrér med få tryk",
+   tekst:"Tryk på plus-knappen for sprøjtning, gødskning, såning, vanding eller høst. Vejret fra DMI skrives automatisk ind i sprøjtejournalen."},
+  {ikon:"📐", titel:"Opret dine egne marker",
+   tekst:"Under plus-knappen kan du hente en mark direkte fra markblokken — eller tegne den selv på kortet. Appen regner arealet ud for dig."},
+  {ikon:"📋", titel:"Klar til kontrolbesøg",
+   tekst:"Under Mere finder du sprøjtejournalen. Vælg sæson og gem den som PDF med dit bedriftsnavn og CVR — klar til at vise frem."},
+];
+let onbTrin = 0;
+function onbVis(){
+  const t = ONB_TRIN[onbTrin];
+  document.getElementById("onb-ikon").textContent = t.ikon;
+  document.getElementById("onb-titel").textContent = t.titel;
+  document.getElementById("onb-tekst").textContent = t.tekst;
+  document.getElementById("onb-prikker").innerHTML =
+    ONB_TRIN.map((_, i) => `<i class="${i === onbTrin ? "on" : ""}"></i>`).join("");
+  const sidste = onbTrin === ONB_TRIN.length - 1;
+  document.getElementById("onb-knap").textContent = sidste ? "Kom i gang" : "Videre";
+  document.getElementById("onb-spring").style.visibility = sidste ? "hidden" : "";
+}
+function onbNaeste(){
+  if(onbTrin < ONB_TRIN.length - 1){ onbTrin++; onbVis(); }
+  else onbLuk();
+}
+function onbLuk(){
+  document.getElementById("onb").classList.remove("open");
+  try{ localStorage.setItem(ONB_LS, "1"); }catch(e){}
+  if(typeof kort !== "undefined") setTimeout(() => kort.invalidateSize(), 80);
+}
+function onbStart(){
+  onbTrin = 0; onbVis();
+  document.getElementById("onb").classList.add("open");
+}
+try{ if(!localStorage.getItem(ONB_LS)) onbStart(); }catch(e){}
 
 /* PWA: offline-understøttelse */
 if("serviceWorker" in navigator){

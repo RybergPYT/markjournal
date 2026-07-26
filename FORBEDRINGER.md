@@ -22,6 +22,15 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 9 (onboarding — Sørens ønske) — 15.07.26
+- ✅ 5-trins velkomstguide første gang appen åbnes: velkomst, kortet/markblokke, plus-knappen,
+  opret egen mark, PDF til kontrolbesøg. Prikker viser hvor man er, "Spring over" skjules på sidste trin,
+  valget huskes i localStorage. Kan altid genses via Mere → "Sådan bruger du appen"
+- ✅ Fandt bug undervejs: `window.kort` er altid falsk (const bindes ikke til window),
+  så kortets invalidateSize kørte aldrig — rettet to steder til typeof-tjek
+- ⚠️ Guiden er tekst+emoji; små skærmbilleder af de faktiske skærme ville være stærkere
+- ⚠️ Ingen swipe mellem trin — kun knappen. Fint på traktor-fingre, men swipe forventes af mange
+
 ### Iteration 8 (sæson-filter) — 15.07.26
 - ✅ Dansk høstår (1. aug → 31. juli) beregnes af datoen; sæson-chips i sprøjtejournal og udbytter,
   "Alle år" som ekstra valg. PDF-titel og CSV følger valget (CSV har nu egen sæson-kolonne).
