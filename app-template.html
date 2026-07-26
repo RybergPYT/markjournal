@@ -162,6 +162,16 @@
     text-shadow:0 0 3px #fff, 0 0 5px #fff, 0 0 8px #fff;
     text-align:center; white-space:nowrap;
   }
+  .hotpin{
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.1rem; line-height:1; cursor:pointer;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));
+  }
+  .hotpin span{
+    background:rgba(255,255,255,.92); border-radius:50%;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--gold);
+  }
   .marklabel .lha{font-weight:500; font-size:.68rem}
   .marklabel::before{display:none}
   .soeg-overlay{
@@ -465,6 +475,10 @@
               <button class="typebtn" onclick="closeSheet(); startVaelgBlok()"><div class="ico">📐</div><div class="t">Fra markblok</div><div class="d">Tryk på en markblok på kortet</div></button>
               <button class="typebtn" onclick="closeSheet(); startTegn()"><div class="ico">✏️</div><div class="t">Tegn egen mark</div><div class="d">Sæt punkter langs kanten</div></button>
             </div>
+            <div class="sect-label">Markering på kort</div>
+            <div class="typegrid" style="padding-top:0">
+              <button class="typebtn" onclick="closeSheet(); startHotspot()"><div class="ico">📍</div><div class="t">Hotspot</div><div class="d">Sten, dræn, vildtskade …</div></button>
+            </div>
           </div>
 
           <!-- step 2: mark -->
@@ -504,6 +518,16 @@
             <div class="sect-label">Detaljer</div>
             <div class="card" id="gen-fields"></div>
             <button class="bigbtn" onclick="saveGenerisk()">Gem registrering</button>
+          </div>
+
+          <!-- step: ny hotspot-markering -->
+          <div id="step-nyhotspot" style="display:none">
+            <div class="sect-label">Hvad er det?</div>
+            <div class="fieldchips" id="hs-typer"></div>
+            <div class="card">
+              <div class="formrow"><span class="lab">Note (valgfri)</span><input id="hs-note" placeholder="fx stor sten ved læhegn" style="width:170px"></div>
+            </div>
+            <button class="bigbtn" onclick="gemHotspot()">Gem markering</button>
           </div>
 
           <!-- step: ny opgave -->
@@ -727,16 +751,76 @@ let mapMode = null; // null | "blok" | "tegn"
 kort.on("click", e => {
   if(mapMode === "blok") vaelgBlokVedPunkt(e.latlng);
   else if(mapMode === "tegn") tegnTilfoejPunkt(e.latlng);
+  else if(mapMode === "hotspot") opretHotspot(e.latlng);
 });
 
-/* hotspots: placeret i Nørremarken og Åmarken */
-[["m1","Sten"],["m3","Drænbrønd"]].forEach(([id, navn]) => {
-  const m = MARKER[id]; if(!m) return;
-  const c = L.geoJSON(m.feature).getBounds().getCenter();
-  L.circleMarker([c.lat + 0.0006, c.lng + 0.001], {
-    radius:7, color:"#fff", weight:2.5, fillColor:"#C98F2B", fillOpacity:1
-  }).bindTooltip(navn).addTo(hotLag);
-});
+/* ===================== HOTSPOTS (egne markeringer på kortet) ===================== */
+const HOT_LS = "markjournal-hotspots-v1";
+const HOT_TYPER = {
+  "Sten":       {ikon:"🪨", farve:"#8a8378"},
+  "Drænbrønd":  {ikon:"💧", farve:"#3C6E9F"},
+  "Vildtskade": {ikon:"🦌", farve:"#8a5a3a"},
+  "Vådt hul":   {ikon:"🌊", farve:"#5b7f9c"},
+  "Andet":      {ikon:"📍", farve:"#C98F2B"},
+};
+let hotspots = [];
+try{ hotspots = JSON.parse(localStorage.getItem(HOT_LS)) || []; }catch(e){}
+function gemHotspots(){ try{ localStorage.setItem(HOT_LS, JSON.stringify(hotspots)); }catch(e){} }
+
+function tegnHotspots(){
+  hotLag.clearLayers();
+  hotspots.forEach(h => {
+    const t = HOT_TYPER[h.type] || HOT_TYPER["Andet"];
+    L.marker([h.lat, h.lng], {
+      icon: L.divIcon({className:"hotpin", html:`<span>${t.ikon}</span>`, iconSize:[30,30], iconAnchor:[15,15]})
+    }).bindTooltip(`${h.type}${h.note ? " · " + h.note : ""}<br><small>tryk for at slette</small>`)
+      .on("click", () => sletHotspot(h.id))
+      .addTo(hotLag);
+  });
+}
+function startHotspot(){
+  go("scr-kort"); mapMode = "hotspot";
+  if(!document.getElementById("chip-hot").classList.contains("on"))
+    toggleLayer("hot", document.getElementById("chip-hot"));
+  visMode("Tryk dér på kortet, hvor markeringen skal sidde", false);
+}
+function opretHotspot(ll){
+  hotspotKladde = ll;
+  afbrydMapMode();
+  document.getElementById("veil").classList.add("open");
+  document.getElementById("sheet-title").textContent = "Ny markering";
+  document.getElementById("hs-note").value = "";
+  hotspotType = "Sten";
+  const tc = document.getElementById("hs-typer"); tc.innerHTML = "";
+  Object.entries(HOT_TYPER).forEach(([navn, t]) => {
+    const c = document.createElement("button");
+    c.className = "fchip" + (navn === hotspotType ? " sel" : "");
+    c.textContent = t.ikon + " " + navn;
+    c.onclick = () => { hotspotType = navn;
+      tc.querySelectorAll(".fchip").forEach(x => x.classList.remove("sel")); c.classList.add("sel"); };
+    tc.appendChild(c);
+  });
+  showStep("nyhotspot");
+}
+let hotspotKladde = null, hotspotType = "Sten";
+function gemHotspot(){
+  if(!hotspotKladde) return;
+  hotspots.push({id: Date.now(), type: hotspotType,
+    note: document.getElementById("hs-note").value.trim(),
+    lat: hotspotKladde.lat, lng: hotspotKladde.lng, d: idag()});
+  hotspotKladde = null;
+  gemHotspots(); tegnHotspots();
+  closeSheet();
+  toast("Markering gemt ✓");
+}
+function sletHotspot(id){
+  const h = hotspots.find(x => x.id === id); if(!h) return;
+  if(!confirm(`Slet markeringen "${h.type}${h.note ? " · " + h.note : ""}"?`)) return;
+  hotspots = hotspots.filter(x => x.id !== id);
+  gemHotspots(); tegnHotspots();
+  toast("Markering slettet");
+}
+tegnHotspots();
 
 /* GPS-position hvis brugeren tillader det */
 if(navigator.geolocation){
@@ -1294,7 +1378,7 @@ function openSheet(){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer","generisk","nymark","redigermark","indstillinger","nyopgave"].forEach(x=>{
+  ["type","mark","produkt","detaljer","generisk","nymark","redigermark","indstillinger","nyopgave","nyhotspot"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }

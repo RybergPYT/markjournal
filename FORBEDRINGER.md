@@ -9,7 +9,7 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 1. ~~Alle registreringstyper (gødskning, såning, jordbearbejdning, vanding, høst)~~ ✅ iteration 1
 1b. ~~SØRENS ØNSKER: adressesøgning + tilføj mark fra markblok + tegn egen mark~~ ✅ iteration 2
 2. ~~Slet/redigér en registrering OG slet/omdøb en mark~~ ✅ iteration 3
-3. Hotspots: opret på kortet med tryk-og-hold / knap, gem i localStorage, egne noter
+3. ~~Hotspots: opret på kortet, gem lokalt, egne noter~~ ✅ iteration 10
 4. Registrér på flere marker på én gang (fx sprøjtning af 3 marker i træk)
 5. ~~Sæson-vælger i journal, udbytter, PDF og CSV~~ ✅ iteration 8
 6. ~~Opgaver: rigtige opgaver med localStorage (opret/afslut)~~ ✅ iteration 6
@@ -21,6 +21,15 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 10 (hotspots på kortet) — 26.07.26
+- ✅ Plus-knappen → Hotspot: tryk på kortet, vælg type (🪨 sten, 💧 drænbrønd, 🦌 vildtskade,
+  🌊 vådt hul, 📍 andet) + note. Vises som emoji-pin, gemmes lokalt, tryk på pin = slet.
+  Hele livscyklussen verificeret inkl. genindlæsning. De to fake demo-hotspots er væk
+- ⚠️ Hotspots kan ikke redigeres, kun slettes og oprettes igen
+- ⚠️ Ingen liste over hotspots — ved mange pins bliver de svære at finde uden at scanne kortet
+- ⚠️ "Brug min GPS-position" ville være hurtigere end at trykke præcist, når man står ved stenen
+- → Næste kandidater: kemilager (#8), flere marker på én registrering (#4), rigtig middeldatabase (#10)
 
 ### Iteration 9 (onboarding — Sørens ønske) — 15.07.26
 - ✅ 5-trins velkomstguide første gang appen åbnes: velkomst, kortet/markblokke, plus-knappen,
