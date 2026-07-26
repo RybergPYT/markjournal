@@ -22,6 +22,15 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 11 (GPS-hotspot + hotspot-liste) — 26.07.26
+- ✅ "📍 Her hvor jeg står"-knap i hotspot-tilstand: bruger telefonens GPS, zoomer derhen og
+  åbner arket — ingen præcisionstryk med handsker på. Knappen vises kun i hotspot-tilstand
+- ✅ Mere → "Markeringer på kortet": liste med ikon, type og note; tryk = zoom til pin på kortet,
+  ✕ = slet. Listen opdaterer sig selv efter sletning. Hele flowet verificeret med simuleret GPS
+- ⚠️ Ingen afstands-visning ("340 m herfra") — ville hjælpe med at prioritere i listen
+- ⚠️ Hotspots kan stadig ikke redigeres, kun slettes
+- → Næste kandidater: kemilager (#8), flere marker på én registrering (#4), rigtig middeldatabase (#10)
+
 ### Iteration 10 (hotspots på kortet) — 26.07.26
 - ✅ Plus-knappen → Hotspot: tryk på kortet, vælg type (🪨 sten, 💧 drænbrønd, 🦌 vildtskade,
   🌊 vådt hul, 📍 andet) + note. Vises som emoji-pin, gemmes lokalt, tryk på pin = slet.

@@ -332,6 +332,7 @@
 
           <div class="mapmode" id="mapMode" style="display:none">
             <span id="mapModeTekst" style="flex:1">–</span>
+            <button id="mmGps" style="display:none" onclick="hotspotHerJegStaar()">📍 Her hvor jeg står</button>
             <button id="mmFortryd" onclick="tegnFortrydPunkt()">Fortryd punkt</button>
             <button id="mmFaerdig" onclick="tegnFaerdig()">Færdig</button>
             <button onclick="afbrydMapMode()">Annullér</button>
@@ -399,6 +400,10 @@
             <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">🧪</div>
             <div class="grow"><div class="title">Kemilager</div><div class="sub">Beholdning justeres automatisk ved registrering</div></div><span class="chev">›</span>
           </button>
+          <button class="row" onclick="renderHotspotListe(); go('scr-hotspots')">
+            <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">📍</div>
+            <div class="grow"><div class="title">Markeringer på kortet</div><div class="sub">Sten, dræn, vildtskader m.m.</div></div><span class="chev">›</span>
+          </button>
           <button class="row" onclick="renderUdbytte(); go('scr-udbytte')">
             <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">🌾</div>
             <div class="grow"><div class="title">Udbytter</div><div class="sub">Oversigt over høstede marker og samlet høst</div></div><span class="chev">›</span>
@@ -430,6 +435,14 @@
             <div class="grow"><div class="title">Nulstil til demodata</div><div class="sub">Sletter dine registreringer på denne enhed</div></div>
           </button>
         </div>
+      </div>
+
+      <!-- ============ HOTSPOT-LISTE ============ -->
+      <div class="scr" id="scr-hotspots">
+        <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
+        <div class="apphead" style="padding-top:0"><h2>Markeringer</h2><span class="pill info" id="hs-antal">–</span></div>
+        <div class="card" id="hs-liste"></div>
+        <button class="ghostbtn" onclick="startHotspot()">+ Ny markering på kortet</button>
       </div>
 
       <!-- ============ UDBYTTER ============ -->
@@ -783,6 +796,21 @@ function startHotspot(){
   if(!document.getElementById("chip-hot").classList.contains("on"))
     toggleLayer("hot", document.getElementById("chip-hot"));
   visMode("Tryk dér på kortet, hvor markeringen skal sidde", false);
+  document.getElementById("mmGps").style.display = "";
+}
+/* Brug telefonens GPS i stedet for at ramme punktet manuelt */
+function hotspotHerJegStaar(){
+  if(!navigator.geolocation){ toast("Din telefon deler ikke position", true); return; }
+  toast("Finder din position …");
+  navigator.geolocation.getCurrentPosition(
+    p => {
+      const ll = L.latLng(p.coords.latitude, p.coords.longitude);
+      kort.setView(ll, Math.max(kort.getZoom(), 17));
+      opretHotspot(ll);
+    },
+    () => toast("Kunne ikke finde din position — tryk på kortet i stedet", true),
+    {enableHighAccuracy: true, timeout: 10000}
+  );
 }
 function opretHotspot(ll){
   hotspotKladde = ll;
@@ -813,11 +841,35 @@ function gemHotspot(){
   closeSheet();
   toast("Markering gemt ✓");
 }
+function renderHotspotListe(){
+  const l = document.getElementById("hs-liste");
+  document.getElementById("hs-antal").textContent =
+    hotspots.length ? hotspots.length + (hotspots.length === 1 ? " markering" : " markeringer") : "Ingen endnu";
+  if(!hotspots.length){
+    l.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen markeringer endnu — tryk "+ Ny markering" og sæt den på kortet.</div></div></div>`;
+    return;
+  }
+  l.innerHTML = hotspots.slice().reverse().map(h => {
+    const t = HOT_TYPER[h.type] || HOT_TYPER["Andet"];
+    return `<button class="row" onclick="visHotspot(${h.id})">
+      <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">${t.ikon}</div>
+      <div class="grow"><div class="title">${h.type}</div><div class="sub">${h.note || "Oprettet " + h.d}</div></div>
+      <span class="chev" onclick="event.stopPropagation(); sletHotspot(${h.id})" style="padding:6px" title="Slet">✕</span>
+    </button>`;
+  }).join("");
+}
+function visHotspot(id){
+  const h = hotspots.find(x => x.id === id); if(!h) return;
+  go("scr-kort");
+  setTimeout(() => kort.setView([h.lat, h.lng], 18), 120);
+  toast(h.type + (h.note ? " · " + h.note : ""));
+}
 function sletHotspot(id){
   const h = hotspots.find(x => x.id === id); if(!h) return;
   if(!confirm(`Slet markeringen "${h.type}${h.note ? " · " + h.note : ""}"?`)) return;
   hotspots = hotspots.filter(x => x.id !== id);
   gemHotspots(); tegnHotspots();
+  if(navCurrent === "scr-hotspots") renderHotspotListe();
   toast("Markering slettet");
 }
 tegnHotspots();
@@ -863,6 +915,7 @@ function visMode(tekst, medTegneknapper){
 function afbrydMapMode(){
   mapMode = null;
   document.getElementById("mapMode").style.display = "none";
+  document.getElementById("mmGps").style.display = "none";
   if(tegnLag){ kort.removeLayer(tegnLag); tegnLag = null; }
   tegnPunkter = [];
 }
