@@ -11,16 +11,23 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 2. ~~Slet/redigér en registrering OG slet/omdøb en mark~~ ✅ iteration 3
 3. Hotspots: opret på kortet med tryk-og-hold / knap, gem i localStorage, egne noter
 4. Registrér på flere marker på én gang (fx sprøjtning af 3 marker i træk)
-5. Sæson-vælger i journalen (25/26, 26/27 …) i stedet for fast tekst
+5. ~~Sæson-vælger i journal, udbytter, PDF og CSV~~ ✅ iteration 8
 6. ~~Opgaver: rigtige opgaver med localStorage (opret/afslut)~~ ✅ iteration 6
 7. ~~PDF-eksport af sprøjtejournal (print-venlig side + window.print())~~ ✅ iteration 4
 8. Kemilager: simpel beholdning pr. middel, træk ved registrering
 9. ~~Udbytte-oversigt pr. mark under "Mere → Udbytter"~~ ✅ iteration 7
 10. Middeldatabase: erstat demo-listen med Miljøstyrelsens BMD-udtræk (statisk JSON i repo)
-11. Onboarding: første gang appen åbnes → kort guide (3 skærme)
+11. ~~Onboarding: første gang appen åbnes → kort guide~~ ✅ iteration 9 (Sørens ønske)
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 8 (sæson-filter) — 15.07.26
+- ✅ Dansk høstår (1. aug → 31. juli) beregnes af datoen; sæson-chips i sprøjtejournal og udbytter,
+  "Alle år" som ekstra valg. PDF-titel og CSV følger valget (CSV har nu egen sæson-kolonne).
+  Verificeret: 25/26 vs 26/27 giver korrekt opdelte rækker og totaler
+- ⚠️ Valget nulstilles til indeværende sæson ved genstart — bevidst, men bør måske huskes
+- ⚠️ Mark-detaljens journal viser stadig ALLE sæsoner uden filter
 
 ### Iteration 7 (udbytte-oversigt) — 15.07.26
 - ✅ Mere → Udbytter er nu en rigtig side: høst-registreringer pr. mark, nyeste først,

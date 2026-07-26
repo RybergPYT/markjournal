@@ -406,6 +406,7 @@
       <div class="scr" id="scr-udbytte">
         <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
         <div class="apphead" style="padding-top:0"><h2>Udbytter</h2><span class="pill info" id="udb-total">–</span></div>
+        <div class="fieldchips" id="udb-saeson"></div>
         <div class="card" id="udb-list"></div>
         <button class="ghostbtn" onclick="openSheet()">+ Registrér høst</button>
       </div>
@@ -413,7 +414,8 @@
       <!-- ============ SPRØJTEJOURNAL ============ -->
       <div class="scr" id="scr-sj">
         <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
-        <div class="apphead" style="padding-top:0"><h2>Sprøjtejournal</h2><span class="pill info">Sæson 25/26</span></div>
+        <div class="apphead" style="padding-top:0"><h2>Sprøjtejournal</h2><span class="pill info" id="sj-antal">–</span></div>
+        <div class="fieldchips" id="sj-saeson"></div>
         <div class="card" id="sj-list"></div>
         <button class="bigbtn" onclick="eksportPDF()">Gem / print som PDF</button>
         <button class="ghostbtn" onclick="eksportCSV()">Eksportér CSV</button>
@@ -1033,11 +1035,20 @@ function openMark(id){
   go("scr-markdetail");
 }
 
-function renderSJ(){
-  const list=document.getElementById("sj-list"); list.innerHTML="";
+function sproejtRaekker(){
   const rows=[];
-  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return; arr.filter(e=>e.t==="Sprøjtning").forEach(e=>rows.push({m:MARKER[id].navn,...e})); });
-  if(!rows.length){ list.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen sprøjtninger registreret endnu.</div></div></div>`; }
+  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return;
+    arr.filter(e=>e.t==="Sprøjtning" && iSaeson(e)).forEach(e=>rows.push({m:MARKER[id], ...e})); });
+  const noegle = d => d.split(".").reverse().join("");
+  return rows.sort((a,b)=>noegle(b.d).localeCompare(noegle(a.d)));
+}
+function renderSJ(){
+  if(document.getElementById("sj-saeson")) tegnSaesonVaelger("sj-saeson", renderSJ);
+  const list=document.getElementById("sj-list"); list.innerHTML="";
+  const rows=sproejtRaekker().map(r=>({...r, m:r.m.navn}));
+  document.getElementById("sj-antal").textContent =
+    rows.length + (rows.length===1 ? " sprøjtning" : " sprøjtninger");
+  if(!rows.length){ list.innerHTML=`<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen sprøjtninger i ${valgtSaeson==="alle"?"nogen sæson":"sæson "+valgtSaeson}.</div></div></div>`; }
   rows.forEach(e=>{
     list.innerHTML+=`<div class="row" style="cursor:default">
       <div class="journal-dot" style="background:${e.c}"></div>
@@ -1065,12 +1076,42 @@ function gemIndstillinger(){
   toast("Indstillinger gemt ✓");
 }
 
+/* ===================== SÆSON (høstår: 1. aug → 31. juli) ===================== */
+function datoTilSaeson(d){           // "02.07.26" → "25/26"
+  const [, m, y] = d.split(".").map(Number);
+  const start = m >= 8 ? y : y - 1;
+  return `${String(start).padStart(2,"0")}/${String((start + 1) % 100).padStart(2,"0")}`;
+}
+function nuvaerendeSaeson(){ return datoTilSaeson(idag()); }
+let valgtSaeson = nuvaerendeSaeson();
+
+function alleSaesoner(){
+  const s = new Set([nuvaerendeSaeson()]);
+  Object.entries(JOURNAL).forEach(([id, arr]) => { if(MARKER[id]) arr.forEach(e => s.add(datoTilSaeson(e.d))); });
+  return [...s].sort().reverse();
+}
+function iSaeson(e){ return valgtSaeson === "alle" || datoTilSaeson(e.d) === valgtSaeson; }
+
+function tegnSaesonVaelger(vaertId, efter){
+  const v = document.getElementById(vaertId);
+  const saesoner = alleSaesoner();
+  v.innerHTML = "";
+  [...saesoner, "alle"].forEach(s => {
+    const b = document.createElement("button");
+    b.className = "fchip" + (s === valgtSaeson ? " sel" : "");
+    b.textContent = s === "alle" ? "Alle år" : "Sæson " + s;
+    b.onclick = () => { valgtSaeson = s; efter(); };
+    v.appendChild(b);
+  });
+}
+
 /* ===================== UDBYTTE-OVERSIGT ===================== */
 function renderUdbytte(){
+  tegnSaesonVaelger("udb-saeson", renderUdbytte);
   const rows = [];
   Object.entries(JOURNAL).forEach(([id, arr]) => {
     if(!MARKER[id]) return;
-    arr.filter(e => e.t === "Høst").forEach(e => {
+    arr.filter(e => e.t === "Høst" && iSaeson(e)).forEach(e => {
       const m = MARKER[id];
       const match = e.txt.match(/^([\d.,]+) t\/ha/);
       const tha = match ? parseFloat(match[1].replace(",", ".")) : null;
@@ -1081,7 +1122,7 @@ function renderUdbytte(){
   rows.sort((a, b) => noegle(b.d).localeCompare(noegle(a.d)));
   const list = document.getElementById("udb-list");
   if(!rows.length){
-    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen høst-registreringer endnu — tryk "+ Registrér høst" og vælg Høst.</div></div></div>`;
+    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen høst registreret i ${valgtSaeson === "alle" ? "nogen sæson" : "sæson " + valgtSaeson} — tryk "+ Registrér høst".</div></div></div>`;
     document.getElementById("udb-total").textContent = "Ingen høst endnu";
     return;
   }
@@ -1172,18 +1213,11 @@ function sletOpgave(id){
 renderOpgaver();
 
 function eksportPDF(){
-  const rows = [];
-  Object.entries(JOURNAL).forEach(([id, arr]) => {
-    if(!MARKER[id]) return;
-    arr.filter(e => e.t === "Sprøjtning").forEach(e => rows.push({m: MARKER[id], ...e}));
-  });
-  if(!rows.length){ toast("Ingen sprøjtninger at printe endnu"); return; }
-  /* nyeste øverst: dd.mm.yy → yymmdd til sortering */
-  const noegle = d => d.split(".").reverse().join("");
-  rows.sort((a, b) => noegle(b.d).localeCompare(noegle(a.d)));
+  const rows = sproejtRaekker();
+  if(!rows.length){ toast("Ingen sprøjtninger at printe i denne sæson"); return; }
   const nu = new Date();
   document.getElementById("printRapport").innerHTML = `
-    <h1>Sprøjtejournal</h1>
+    <h1>Sprøjtejournal ${valgtSaeson === "alle" ? "— alle år" : "— sæson " + valgtSaeson}</h1>
     <div class="meta">
       Bedrift: ${indstillinger.bedrift || "______________________________"} &nbsp; CVR: ${indstillinger.cvr || "______________"}<br>
       Antal sprøjtninger: ${rows.length} · Udskrevet: ${idag()} kl. ${String(nu.getHours()).padStart(2,"0")}:${String(nu.getMinutes()).padStart(2,"0")} · Ført digitalt i Markjournal
@@ -1205,9 +1239,9 @@ function eksportPDF(){
 }
 
 function eksportCSV(){
-  const rows=[["Dato","Mark","Markblok","Type","Detaljer"]];
-  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return; arr.forEach(e=>{
-    rows.push([e.d, MARKER[id].navn, MARKER[id].blok, e.t, e.txt]);
+  const rows=[["Dato","Sæson","Mark","Markblok","Type","Detaljer"]];
+  Object.entries(JOURNAL).forEach(([id,arr])=>{ if(!MARKER[id]) return; arr.filter(iSaeson).forEach(e=>{
+    rows.push([e.d, datoTilSaeson(e.d), MARKER[id].navn, MARKER[id].blok, e.t, e.txt]);
   }); });
   const csv=rows.map(r=>r.map(c=>`"${String(c).replaceAll('"','""')}"`).join(";")).join("\n");
   const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
