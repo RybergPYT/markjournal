@@ -152,6 +152,53 @@
     box-shadow:0 2px 8px rgba(20,26,18,.12); text-align:right;
   }
   .kortbox:active{background:var(--green-100)}
+
+  /* ---------- Handsketilpasset: store trykflader ---------- */
+  .row{min-height:56px}
+  .fchip{min-height:46px; padding:11px 15px; font-size:.82rem}
+  .typebtn{min-height:88px}
+  .tab{min-height:46px}
+  .bigbtn{padding:17px; font-size:1rem}
+  .ghostbtn{min-height:46px}
+
+  /* ---------- "Du står på …" med genvej til registrering ---------- */
+  .herErDu{
+    position:absolute; left:12px; right:12px; bottom:98px; z-index:905;
+    background:var(--green-900); color:#fff; border-radius:14px;
+    padding:12px 14px; display:flex; align-items:center; gap:10px;
+    box-shadow:0 6px 18px rgba(20,26,18,.35);
+  }
+  .hed-tekst{flex:1; font-size:.85rem; line-height:1.4; min-width:0}
+  .hed-lille{opacity:.75; font-size:.72rem}
+  .hed-knap{
+    background:#fff; color:var(--green-900); border:none; border-radius:99px;
+    padding:12px 15px; font:inherit; font-size:.8rem; font-weight:700; cursor:pointer;
+    white-space:nowrap; min-height:46px;
+  }
+  .hed-luk{
+    background:none; border:none; color:rgba(255,255,255,.7);
+    font-size:.95rem; cursor:pointer; padding:8px; font-family:inherit;
+  }
+
+  /* ---------- "Som sidst"-genvej ---------- */
+  .somsidst-btn{
+    display:flex; align-items:center; gap:12px; width:calc(100% - 32px);
+    margin:0 16px 10px; padding:14px; min-height:56px;
+    background:var(--green-100); border:1.5px solid var(--green-600);
+    border-radius:14px; cursor:pointer; font:inherit; color:var(--green-900); text-align:left;
+  }
+  .ss-ikon{font-size:1.3rem; font-weight:700}
+  .ss-tekst{font-size:.82rem; line-height:1.45}
+
+  /* ---------- Hurtigvalg til tal (undgår tastatur) ---------- */
+  .hurtigvalg{display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 12px; border-bottom:1px solid var(--line)}
+  .hvchip{
+    flex:1; min-width:58px; min-height:46px;
+    background:var(--app-bg); border:1.5px solid var(--line); border-radius:11px;
+    font:inherit; font-size:.85rem; font-weight:600; color:var(--ink); cursor:pointer;
+    font-variant-numeric:tabular-nums;
+  }
+  .hvchip.sel{background:var(--green-100); border-color:var(--green-700); color:var(--green-900)}
   .kortbox.soeger{background:var(--green-700); color:#fff; border-color:var(--green-700)}
   .weathercard{
     position:absolute; left:12px; right:12px; bottom:12px; z-index:900;
@@ -355,6 +402,8 @@
             <button class="kortbox" id="gpsKnap" onclick="findMigPaaKortet()">📍 Min placering</button>
           </div>
 
+          <div class="herErDu" id="herErDu" style="display:none"></div>
+
           <div class="weathercard" onclick="visVejrInfo()">
             <div class="temp" id="w-temp">–°</div>
             <div class="wsub" id="w-sub"><strong>Henter vejr …</strong><br>DMI · HARMONIE-model</div>
@@ -384,7 +433,7 @@
         </div>
         <div class="sect-label">Dyrkningsjournal</div>
         <div class="card" id="md-journal"></div>
-        <button class="ghostbtn" onclick="openSheet()">+ Ny registrering på denne mark</button>
+        <button class="bigbtn" onclick="openSheet(currentMark)">+ Ny registrering på denne mark</button>
         <button class="ghostbtn" onclick="visPaaKort()">Vis på kort</button>
       </div>
 
@@ -407,10 +456,6 @@
             <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">📋</div>
             <div class="grow"><div class="title">Sprøjtejournal</div><div class="sub">Lovpligtig journal · eksport til CSV</div></div><span class="chev">›</span>
           </button>
-          <button class="row" onclick="toast('Kemilager kommer i næste version')">
-            <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">🧪</div>
-            <div class="grow"><div class="title">Kemilager</div><div class="sub">Beholdning justeres automatisk ved registrering</div></div><span class="chev">›</span>
-          </button>
           <button class="row" onclick="renderHotspotListe(); go('scr-hotspots')">
             <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">📍</div>
             <div class="grow"><div class="title">Markeringer på kortet</div><div class="sub">Sten, dræn, vildtskader m.m.</div></div><span class="chev">›</span>
@@ -422,10 +467,6 @@
         </div>
         <div class="sect-label">Bedrift &amp; deling</div>
         <div class="card">
-          <button class="row" onclick="toast('Fælles sky-data kommer i næste version — data gemmes lige nu kun på denne enhed')">
-            <div class="swatch" style="background:#E1EAF3;display:flex;align-items:center;justify-content:center">👥</div>
-            <div class="grow"><div class="title">Brugere på bedriften</div><div class="sub">Deling kræver sky-synkronisering (næste version)</div></div><span class="chev">›</span>
-          </button>
           <button class="row" onclick="gemBackup()">
             <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">💾</div>
             <div class="grow"><div class="title">Gem sikkerhedskopi</div><div class="sub" id="backup-sub">Læg filen i iCloud eller send den til dig selv</div></div><span class="chev">›</span>
@@ -519,6 +560,7 @@
           <!-- step 3: product -->
           <div id="step-produkt" style="display:none">
             <div class="sect-label">Vælg middel — opslag i middeldatabase</div>
+            <div id="somsidst"></div>
             <div class="search">🔍<input id="psearch" placeholder="Søg produkt eller aktivstof …" oninput="renderProducts()"></div>
             <div class="card" id="plist" style="margin-top:0"></div>
           </div>
@@ -530,6 +572,7 @@
               <div class="formrow"><span class="lab">Mark</span><strong id="f-mark">–</strong></div>
               <div class="formrow"><span class="lab">Middel</span><strong id="f-prod">–</strong></div>
               <div class="formrow"><span class="lab">Dosering (l/ha)</span><input id="f-dose" value="0,45" inputmode="decimal"></div>
+              <div class="hurtigvalg" id="dose-hurtig"></div>
               <div class="formrow"><span class="lab">Behandlet areal (ha)</span><input id="f-areal" inputmode="decimal"></div>
               <div class="formrow"><span class="lab">Begrundelse</span><input id="f-begr" value="Septoria"></div>
             </div>
@@ -931,19 +974,21 @@ function findMigPaaKortet(){
   if(!navigator.geolocation){ toast("Din telefon deler ikke position", true); return; }
   go("scr-kort");
   const knap = document.getElementById("gpsKnap");
-  knap.textContent = "…";
+  const knapTekst = "📍 Min placering";
+  knap.textContent = "Søger …";
+  knap.classList.add("soeger");
   toast("Finder din position …");
   navigator.geolocation.getCurrentPosition(
     p => {
-      knap.textContent = "◎";
+      knap.textContent = knapTekst; knap.classList.remove("soeger");
       const {ll, noej} = saetMigPaaKort(p, true);
       const id = markVedPunkt(ll);
-      if(id) toast(`Du står på ${MARKER[id].navn} · ±${noej} m`);
-      else toast(`Din position · ±${noej} m — ikke på en af dine marker`);
+      if(id) visHerErDu(id, noej);
+      else { skjulHerErDu(); toast(`Din position · ±${noej} m — ikke på en af dine marker`); }
       startFoelgMig();
     },
     err => {
-      knap.textContent = "◎";
+      knap.textContent = knapTekst; knap.classList.remove("soeger");
       toast(err.code === 1
         ? "Giv appen lov til at bruge din position i telefonens indstillinger"
         : "Kunne ikke finde din position — prøv igen udendørs", true);
@@ -951,6 +996,18 @@ function findMigPaaKortet(){
     {enableHighAccuracy:true, timeout:10000, maximumAge:5000}
   );
 }
+
+/* Genvej: står du på en mark, kan du registrere direkte uden at lede efter den */
+function visHerErDu(id, noej){
+  const m = MARKER[id];
+  const b = document.getElementById("herErDu");
+  b.innerHTML = `<div class="hed-tekst">Du står på <strong>${m.navn}</strong><br>
+      <span class="hed-lille">${m.afgrode} · ${m.ha} ha · ±${noej} m</span></div>
+    <button class="hed-knap" onclick="openSheet('${id}')">Registrér her</button>
+    <button class="hed-luk" onclick="skjulHerErDu()" aria-label="Luk">✕</button>`;
+  b.style.display = "flex";
+}
+function skjulHerErDu(){ document.getElementById("herErDu").style.display = "none"; }
 
 /* Følg positionen mens man kører — stopper automatisk efter 5 min for at spare batteri */
 function startFoelgMig(){
@@ -1574,11 +1631,13 @@ function eksportCSV(){
 }
 
 /* registrerings-flow */
-function openSheet(){
-  reg={};
+/* forvalgtMark: åbnes registreringen fra en mark, springes markvalget over */
+function openSheet(forvalgtMark){
+  reg = forvalgtMark && MARKER[forvalgtMark] ? {mark: forvalgtMark} : {};
   document.getElementById("veil").classList.add("open");
   showStep("type");
-  document.getElementById("sheet-title").textContent="Ny registrering";
+  document.getElementById("sheet-title").textContent =
+    reg.mark ? "Ny registrering · " + MARKER[reg.mark].navn : "Ny registrering";
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
@@ -1635,23 +1694,85 @@ function saveGenerisk(){
 function pickType(t){
   reg.type=t;
   document.getElementById("sheet-title").textContent=t;
+  /* Er marken allerede valgt (registrering startet fra en mark), springes trinnet over */
+  if(reg.mark && MARKER[reg.mark]){ efterMarkValg(); return; }
   const mc=document.getElementById("markchips"); mc.innerHTML="";
   Object.entries(MARKER).forEach(([id,m])=>{
     const c=document.createElement("button"); c.className="fchip";
     c.textContent=`${m.navn} · ${m.ha} ha`;
     c.onclick=()=>{ reg.mark=id; mc.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel");
-      setTimeout(()=>{
-        if(reg.type==="Sprøjtning"){ showStep("produkt"); renderProducts(); }
-        else { buildGenerisk(); showStep("generisk"); }
-      },200); };
+      setTimeout(efterMarkValg, 180); };
     mc.appendChild(c);
   });
   showStep("mark");
+}
+function efterMarkValg(){
+  if(reg.type === "Sprøjtning"){ showStep("produkt"); renderProducts(); }
+  else { buildGenerisk(); showStep("generisk"); }
+}
+
+/* "Som sidst": find seneste registrering af samme type på marken */
+function sidsteAfType(markId, type){
+  const arr = JOURNAL[markId] || [];
+  return arr.find(e => e.t === type) || null;
+}
+/* Gentag seneste sprøjtning: udfylder middel og dosering og hopper til detaljer */
+function brugSomSidst(){
+  const sidst = sidsteAfType(reg.mark, "Sprøjtning");
+  if(!sidst) return;
+  const dele = sidst.txt.split(" · ");
+  const middel = dele[0];
+  const dosis = (dele[1] || "").replace(/\s*l\/ha.*/, "").trim();
+  reg.produkt = middel;
+  aabnDetaljer(middel, dosis || "0,45");
+  toast("Udfyldt som sidste gang — tjek dosering");
+}
+/* Fælles: åbn detalje-trinnet med middel, dosering, areal og aktuelt vejr */
+function aabnDetaljer(middel, dosis){
+  const m = MARKER[reg.mark];
+  document.getElementById("f-mark").textContent = m.navn;
+  document.getElementById("f-prod").textContent = middel;
+  document.getElementById("f-dose").value = dosis;
+  document.getElementById("f-areal").value = m.ha;
+  if(vejr){
+    document.getElementById("f-vind").textContent = `${dk(vejr.wind_speed_10m)} m/s · ${retning(vejr.wind_direction_10m)}`;
+    document.getElementById("f-temp").textContent = `${dk(vejr.temperature_2m)} °C`;
+    document.getElementById("f-vejrkilde").textContent = `DMI · kl. ${vejrTid()}`;
+  }else{
+    document.getElementById("f-vind").textContent = "–";
+    document.getElementById("f-temp").textContent = "–";
+    document.getElementById("f-vejrkilde").textContent = "DMI · ikke hentet";
+  }
+  tegnHurtigvalg(dosis);
+  showStep("detaljer");
+}
+/* Hurtigvalg til dosering — undgår tastatur i traktoren */
+function tegnHurtigvalg(nuvaerende){
+  const v = document.getElementById("dose-hurtig");
+  const forslag = ["0,25", "0,5", "0,75", "1,0", "1,5", "2,0"];
+  if(nuvaerende && !forslag.includes(nuvaerende)) forslag.unshift(nuvaerende);
+  v.innerHTML = forslag.slice(0, 6).map(d =>
+    `<button class="hvchip${d === nuvaerende ? " sel" : ""}" onclick="saetDosis('${d}')">${d}</button>`).join("");
+}
+function saetDosis(d){
+  document.getElementById("f-dose").value = d;
+  tegnHurtigvalg(d);
 }
 function renderProducts(){
   const q=(document.getElementById("psearch").value||"").toLowerCase();
   const crop=MARKER[reg.mark].afgrode;
   const list=document.getElementById("plist"); list.innerHTML="";
+
+  /* Genvej: gentag seneste sprøjtning på marken med ét tryk */
+  const sidst = sidsteAfType(reg.mark, "Sprøjtning");
+  const gen = document.getElementById("somsidst");
+  if(sidst && !q){
+    const kort = sidst.txt.split(" · ").slice(0, 2).join(" · ");
+    gen.style.display = "";
+    gen.innerHTML = `<button class="somsidst-btn" onclick="brugSomSidst()">
+      <span class="ss-ikon">↻</span>
+      <span class="ss-tekst"><strong>Som sidst</strong><br>${kort} · ${sidst.d}</span></button>`;
+  } else { gen.style.display = "none"; gen.innerHTML = ""; }
   PRODUKTER.filter(p=>p.navn.toLowerCase().includes(q)||p.aktiv.toLowerCase().includes(q)).forEach(p=>{
     const approved=p.ok && p.afgroder.includes(crop);
     const pill = !p.ok ? `<span class="pill bad">Udgået</span>` :
@@ -1663,20 +1784,9 @@ function renderProducts(){
       if(!p.ok){ toast(p.navn+": godkendelsen er udløbet — kan ikke vælges", true); return; }
       if(!approved){ toast(`${p.navn} er ikke godkendt i ${crop} — kan ikke vælges`, true); return; }
       reg.produkt=p.navn;
-      document.getElementById("f-mark").textContent=MARKER[reg.mark].navn;
-      document.getElementById("f-prod").textContent=p.navn;
-      document.getElementById("f-areal").value=MARKER[reg.mark].ha;
-      /* levende vejr ind i formularen */
-      if(vejr){
-        document.getElementById("f-vind").textContent = `${dk(vejr.wind_speed_10m)} m/s · ${retning(vejr.wind_direction_10m)}`;
-        document.getElementById("f-temp").textContent = `${dk(vejr.temperature_2m)} °C`;
-        document.getElementById("f-vejrkilde").textContent = `DMI · kl. ${vejrTid()}`;
-      }else{
-        document.getElementById("f-vind").textContent = "–";
-        document.getElementById("f-temp").textContent = "–";
-        document.getElementById("f-vejrkilde").textContent = "DMI · ikke hentet";
-      }
-      showStep("detaljer");
+      const sidsteDosis = sidst && sidst.txt.startsWith(p.navn)
+        ? (sidst.txt.split(" · ")[1] || "").replace(/\s*l\/ha.*/, "").trim() : "";
+      aabnDetaljer(p.navn, sidsteDosis || "0,45");
     };
     list.appendChild(b);
   });

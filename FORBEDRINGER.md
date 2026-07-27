@@ -25,6 +25,24 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 15 (brugervenlighedspakke — Sørens ønske) — 26.07.26
+Fem forbedringer der alle sigter mod: brugbar stående i marken, én hånd, handsker på.
+- ✅ **Genvej fra GPS**: "Du står på Bakkelodden · [Registrér her]" — grøn boks på kortet
+  med knap der åbner registrering med marken forvalgt. Sparer 3 tryk på den hyppigste handling
+- ✅ **Færre trin**: starter man fra en mark (mark-siden eller GPS-boksen), springes markvalget
+  helt over: type → middel → detaljer. Titlen viser marken, så man ved hvor det havner
+- ✅ **"Som sidst"**: grøn genvej øverst i middel-listen der gentager seneste sprøjtning på
+  netop den mark (middel + dosering) og hopper direkte til detaljer. Vælger man samme middel
+  manuelt, foreslås sidste dosering automatisk
+- ✅ **Hurtigvalg til dosering**: 0,25 / 0,5 / 0,75 / 1,0 / 1,5 / 2,0 l/ha som store knapper —
+  intet taltastatur i traktoren. Sidste dosering lægges forrest hvis den afviger
+- ✅ **Større trykflader**: rækker min. 56 px, chips og knapper min. 46 px (handsketilpasset)
+- ✅ **Falske knapper fjernet**: "Kemilager" og "Brugere på bedriften" sagde bare
+  "kommer i næste version" — de er væk, så alt i menuen nu virker
+- ✅ Fanget bug: "📍 Min placering"-knappen mistede sin tekst efter brug (gammel ◎-kode)
+- ⚠️ "Som sidst" findes kun for sprøjtning — gødskning og de andre typer kunne få samme
+- ⚠️ Hurtigvalg er faste tal; kunne læres af brugerens egne hyppigste doseringer
+
 ### Iteration 14 (tydelige kortknapper + kritisk kortfejl) — 26.07.26
 - ✅ Sørens ønske: ◎ og ⌂ erstattet af tekstknapper "📍 Min placering" og "🏠 Mine marker"
 - ✅ FANGET ALVORLIG FEJL: kortet åbnede zoomet ud på HELE VERDEN (zoom 0), fordi fitBounds
