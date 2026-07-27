@@ -25,6 +25,14 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 14 (tydelige kortknapper + kritisk kortfejl) — 26.07.26
+- ✅ Sørens ønske: ◎ og ⌂ erstattet af tekstknapper "📍 Min placering" og "🏠 Mine marker"
+- ✅ FANGET ALVORLIG FEJL: kortet åbnede zoomet ud på HELE VERDEN (zoom 0), fordi fitBounds
+  kørte før layoutet var færdigt. Ramte alle brugere ved appstart på telefon.
+  Fix: sikrKortUdsnit() med invalidateSize + gen-zoom ved load, resize og efter 400 ms
+- ⚠️ Lære: alt der måler skærmstørrelse skal verificeres EFTER load, ikke kun i test hvor
+  siden allerede er varm — test altid med frisk indlæsning
+
 ### Iteration 13 (min GPS-position — Sørens ønske) — 26.07.26
 - ✅ ◎-knap på kortet: finder din position, zoomer derhen, viser blå prik med
   nøjagtighedscirkel (±m) og siger HVILKEN af dine marker du står på (punkt-i-polygon).
