@@ -450,25 +450,11 @@
         <button class="ghostbtn" onclick="visPaaKort()">Vis på kort</button>
       </div>
 
-      <!-- ============ OPGAVER ============ -->
-      <div class="scr" id="scr-opgaver">
-        <div class="apphead"><h2>Opgaver</h2><span class="pill info" id="opg-taeller">–</span></div>
-        <div class="sect-label">Åbne opgaver</div>
-        <div class="card" id="opg-aabne"></div>
-        <button class="ghostbtn" onclick="aabnNyOpgave()">+ Ny opgave</button>
-        <div class="sect-label" id="opg-faerdige-label" style="display:none">Afsluttede</div>
-        <div class="card" id="opg-faerdige" style="display:none"></div>
-      </div>
-
       <!-- ============ MERE ============ -->
       <div class="scr" id="scr-mere">
         <div class="apphead"><h2>Mere</h2></div>
         <div class="sect-label">Journal &amp; dokumentation</div>
         <div class="card">
-          <button class="row" onclick="go('scr-sj')">
-            <div class="swatch" style="background:var(--green-100);display:flex;align-items:center;justify-content:center">📋</div>
-            <div class="grow"><div class="title">Sprøjtejournal</div><div class="sub">Lovpligtig journal · eksport til CSV</div></div><span class="chev">›</span>
-          </button>
           <button class="row" onclick="renderHotspotListe(); go('scr-hotspots')">
             <div class="swatch" style="background:var(--gold-soft);display:flex;align-items:center;justify-content:center">📍</div>
             <div class="grow"><div class="title">Markeringer på kortet</div><div class="sub">Sten, dræn, vildtskader m.m.</div></div><span class="chev">›</span>
@@ -524,10 +510,10 @@
         <button class="ghostbtn" onclick="openSheet()">+ Registrér høst</button>
       </div>
 
-      <!-- ============ SPRØJTEJOURNAL ============ -->
+      <!-- ============ DOWNLOAD (SPRØJTEJOURNAL) ============ -->
       <div class="scr" id="scr-sj">
-        <div class="apphead"><button class="backbtn" onclick="go('scr-mere')">‹ Mere</button></div>
-        <div class="apphead" style="padding-top:0"><h2>Sprøjtejournal</h2><span class="pill info" id="sj-antal">–</span></div>
+        <div class="apphead"><h2>Download</h2><span class="pill info" id="sj-antal">–</span></div>
+        <div class="sect-label">Sprøjtejournal</div>
         <div class="fieldchips" id="sj-saeson"></div>
         <div class="card" id="sj-list"></div>
         <button class="bigbtn" onclick="eksportPDF()">Gem / print som PDF</button>
@@ -564,10 +550,11 @@
             </div>
           </div>
 
-          <!-- step 2: mark -->
+          <!-- step 2: mark (flere kan vælges) -->
           <div id="step-mark" style="display:none">
-            <div class="sect-label">Vælg mark</div>
+            <div class="sect-label">Vælg mark — tryk flere for at registrere på én gang</div>
             <div class="fieldchips" id="markchips"></div>
+            <button class="bigbtn" id="markVidere" onclick="efterMarkValg()" disabled>Vælg en mark</button>
           </div>
 
           <!-- step 3: product -->
@@ -620,18 +607,6 @@
               <div class="formrow"><span class="lab">Note (valgfri)</span><input id="hs-note" placeholder="fx stor sten ved læhegn" style="width:170px"></div>
             </div>
             <button class="bigbtn" onclick="gemHotspot()">Gem markering</button>
-          </div>
-
-          <!-- step: ny opgave -->
-          <div id="step-nyopgave" style="display:none">
-            <div class="sect-label">Ny opgave</div>
-            <div class="card">
-              <div class="formrow"><span class="lab">Opgave</span><input id="op-titel" placeholder="fx Svampesprøjtning" style="width:180px"></div>
-              <div class="formrow"><span class="lab">Note (valgfri)</span><input id="op-note" placeholder="fx efter regn" style="width:180px"></div>
-            </div>
-            <div class="sect-label">Mark (valgfri)</div>
-            <div class="fieldchips" id="op-markchips"></div>
-            <button class="bigbtn" onclick="gemOpgave()">Opret opgave</button>
           </div>
 
           <!-- step: indstillinger -->
@@ -694,8 +669,8 @@
         <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Marker
       </button>
       <button class="tab-plus" onclick="openSheet()" aria-label="Ny registrering">+</button>
-      <button class="tab" data-scr="scr-opgaver" onclick="tabGo(this)">
-        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>Opgaver
+      <button class="tab" data-scr="scr-sj" onclick="tabGo(this)">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>Download
       </button>
       <button class="tab" data-scr="scr-mere" onclick="tabGo(this)">
         <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mere
@@ -1423,7 +1398,6 @@ const BACKUP_NOEGLER = [
   "markjournal-journal-v1",        // registreringer
   "markjournal-marker-v1",         // egne marker
   "markjournal-tilpasninger-v1",   // omdøbte/skjulte marker
-  "markjournal-opgaver-v1",        // opgaver
   "markjournal-hotspots-v1",       // markeringer på kortet
   "markjournal-indstillinger-v1",  // bedrift og CVR
 ];
@@ -1561,83 +1535,6 @@ function renderUdbytte(){
   document.getElementById("udb-total").textContent = sumT ? "≈ " + dk(sumT, 0) + " t i alt" : rows.length + " høstet";
 }
 
-/* ===================== OPGAVER ===================== */
-const OPG_LS = "markjournal-opgaver-v1";
-let opgaver = [];
-try{ opgaver = JSON.parse(localStorage.getItem(OPG_LS)) || []; }catch(e){}
-function gemOpgaver(){ try{ localStorage.setItem(OPG_LS, JSON.stringify(opgaver)); }catch(e){} }
-
-function renderOpgaver(){
-  const aabne = opgaver.filter(o => !o.faerdig);
-  const faerdige = opgaver.filter(o => o.faerdig);
-  document.getElementById("opg-taeller").textContent =
-    aabne.length ? aabne.length + " åbne" : "Alt klaret";
-  const raekke = (o, i) => {
-    const markTxt = o.mark && MARKER[o.mark] ? MARKER[o.mark].navn + (o.note ? " · " : "") : "";
-    return `<button class="row" onclick="skiftOpgave(${o.id})">
-      <div class="swatch" style="background:${o.faerdig ? "var(--green-100)" : "var(--gold-soft)"};display:flex;align-items:center;justify-content:center">${o.faerdig ? "✅" : "⬜"}</div>
-      <div class="grow"><div class="title"${o.faerdig ? ' style="text-decoration:line-through;color:var(--muted)"' : ""}>${o.titel}</div>
-      <div class="sub">${markTxt}${o.note || ""}${!markTxt && !o.note ? "Oprettet " + o.d : ""}</div></div>
-      <span class="chev" onclick="event.stopPropagation(); sletOpgave(${o.id})" style="padding:6px" title="Slet">✕</span>
-    </button>`;
-  };
-  const ac = document.getElementById("opg-aabne");
-  ac.innerHTML = aabne.length ? aabne.map(raekke).join("")
-    : `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Ingen åbne opgaver — tryk "+ Ny opgave" for at oprette én.</div></div></div>`;
-  const fc = document.getElementById("opg-faerdige");
-  document.getElementById("opg-faerdige-label").style.display = faerdige.length ? "" : "none";
-  fc.style.display = faerdige.length ? "" : "none";
-  fc.innerHTML = faerdige.slice(-10).reverse().map(raekke).join("");
-}
-function aabnNyOpgave(){
-  document.getElementById("veil").classList.add("open");
-  document.getElementById("sheet-title").textContent = "Ny opgave";
-  document.getElementById("op-titel").value = "";
-  document.getElementById("op-note").value = "";
-  opgaveMark = null;
-  const mc = document.getElementById("op-markchips"); mc.innerHTML = "";
-  Object.entries(MARKER).forEach(([id, m]) => {
-    const c = document.createElement("button"); c.className = "fchip";
-    c.textContent = m.navn;
-    c.onclick = () => {
-      if(opgaveMark === id){ opgaveMark = null; c.classList.remove("sel"); return; }
-      opgaveMark = id;
-      mc.querySelectorAll(".fchip").forEach(x => x.classList.remove("sel"));
-      c.classList.add("sel");
-    };
-    mc.appendChild(c);
-  });
-  showStep("nyopgave");
-}
-let opgaveMark = null;
-function gemOpgave(){
-  const titel = document.getElementById("op-titel").value.trim();
-  if(!titel){ toast("Skriv hvad opgaven går ud på", true); return; }
-  opgaver.push({
-    id: Date.now(), titel,
-    note: document.getElementById("op-note").value.trim(),
-    mark: opgaveMark, d: idag(), faerdig: false,
-  });
-  gemOpgaver(); renderOpgaver();
-  closeSheet();
-  toast("Opgave oprettet ✓");
-  go("scr-opgaver");
-}
-function skiftOpgave(id){
-  const o = opgaver.find(x => x.id === id); if(!o) return;
-  o.faerdig = !o.faerdig;
-  gemOpgaver(); renderOpgaver();
-  if(o.faerdig) toast("Opgave afsluttet ✓");
-}
-function sletOpgave(id){
-  const o = opgaver.find(x => x.id === id); if(!o) return;
-  if(!confirm(`Slet opgaven "${o.titel}"?`)) return;
-  opgaver = opgaver.filter(x => x.id !== id);
-  gemOpgaver(); renderOpgaver();
-  toast("Opgave slettet");
-}
-renderOpgaver();
-
 function eksportPDF(){
   const rows = sproejtRaekker();
   if(!rows.length){ toast("Ingen sprøjtninger at printe i denne sæson"); return; }
@@ -1690,7 +1587,7 @@ function openSheet(forvalgtMark){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","etiket","detaljer","generisk","nymark","redigermark","indstillinger","nyopgave","nyhotspot"].forEach(x=>{
+  ["type","mark","produkt","etiket","detaljer","generisk","nymark","redigermark","indstillinger","nyhotspot"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }
@@ -1722,42 +1619,74 @@ const TYPEDEF = {
 
 function buildGenerisk(){
   const def = TYPEDEF[reg.type], m = MARKER[reg.mark];
+  const antal = (reg.marker || [reg.mark]).length;
   const c = document.getElementById("gen-fields");
-  c.innerHTML = `<div class="formrow"><span class="lab">Mark</span><strong>${m.navn} · ${m.ha} ha</strong></div>`;
+  c.innerHTML = `<div class="formrow"><span class="lab">Mark</span><strong>${
+    antal > 1 ? `${antal} marker · ${dk(valgtAreal())} ha` : `${m.navn} · ${m.ha} ha`}</strong></div>`;
   def.felter.forEach(f=>{
     c.innerHTML += `<div class="formrow"><span class="lab">${f.lab}</span>
       <input id="${f.id}" value="${f.val(m)}"${f.num ? ' inputmode="decimal"' : ''}></div>`;
   });
 }
 function saveGenerisk(){
-  const def = TYPEDEF[reg.type], m = reg.mark;
+  const def = TYPEDEF[reg.type];
+  const marker = reg.marker && reg.marker.length ? reg.marker : [reg.mark];
   const v = {};
   def.felter.forEach(f=>{ v[f.id] = document.getElementById(f.id).value.trim(); });
-  if(!JOURNAL[m]) JOURNAL[m]=[];
-  JOURNAL[m].unshift({d:idag(), t:reg.type, txt:def.txt(v), c:def.c});
+  marker.forEach(m => {
+    if(!JOURNAL[m]) JOURNAL[m]=[];
+    JOURNAL[m].unshift({d:idag(), t:reg.type, txt:def.txt(v), c:def.c});
+  });
   persist();
   renderSJ(); closeSheet();
-  toast("Registrering gemt ✓");
-  openMark(m);
+  toast(marker.length > 1 ? `Gemt på ${marker.length} marker ✓` : "Registrering gemt ✓");
+  openMark(marker[0]);
 }
 function pickType(t){
   reg.type=t;
   document.getElementById("sheet-title").textContent=t;
   /* Er marken allerede valgt (registrering startet fra en mark), springes trinnet over */
   if(reg.mark && MARKER[reg.mark]){ efterMarkValg(); return; }
+  reg.marker = [];
   const mc=document.getElementById("markchips"); mc.innerHTML="";
   Object.entries(MARKER).forEach(([id,m])=>{
     const c=document.createElement("button"); c.className="fchip";
     c.textContent=`${m.navn} · ${m.ha} ha`;
-    c.onclick=()=>{ reg.mark=id; mc.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel");
-      setTimeout(efterMarkValg, 180); };
+    c.onclick=()=>{
+      const idx = reg.marker.indexOf(id);
+      if(idx >= 0){ reg.marker.splice(idx, 1); c.classList.remove("sel"); }
+      else { reg.marker.push(id); c.classList.add("sel"); }
+      opdaterMarkKnap();
+    };
     mc.appendChild(c);
   });
+  opdaterMarkKnap();
   showStep("mark");
 }
+function opdaterMarkKnap(){
+  const k = document.getElementById("markVidere");
+  const n = (reg.marker || []).length;
+  k.disabled = n === 0;
+  if(n === 0){ k.textContent = "Vælg en mark"; return; }
+  const ha = reg.marker.reduce((s, id) => s + MARKER[id].haNum, 0);
+  k.textContent = n === 1
+    ? `Fortsæt med ${MARKER[reg.marker[0]].navn}`
+    : `Fortsæt med ${n} marker · ${dk(ha)} ha`;
+}
 function efterMarkValg(){
+  /* reg.mark = den første valgte; reg.marker = alle valgte */
+  if(!reg.marker || !reg.marker.length) reg.marker = reg.mark ? [reg.mark] : [];
+  reg.mark = reg.marker[0];
+  if(!reg.mark) return;
   if(reg.type === "Sprøjtning"){ showStep("produkt"); renderProducts(); }
   else { buildGenerisk(); showStep("generisk"); }
+}
+/* Samlet areal på tværs af de valgte marker */
+function valgtAreal(){
+  return (reg.marker || [reg.mark]).reduce((s, id) => s + (MARKER[id] ? MARKER[id].haNum : 0), 0);
+}
+function valgteNavne(){
+  return (reg.marker || [reg.mark]).map(id => MARKER[id].navn).join(", ");
 }
 
 /* "Som sidst": find seneste registrering af samme type på marken */
@@ -1778,11 +1707,12 @@ function brugSomSidst(){
 }
 /* Fælles: åbn detalje-trinnet med middel, dosering, areal og aktuelt vejr */
 function aabnDetaljer(middel, dosis){
-  const m = MARKER[reg.mark];
-  document.getElementById("f-mark").textContent = m.navn;
+  const antal = (reg.marker || [reg.mark]).length;
+  document.getElementById("f-mark").textContent =
+    antal > 1 ? `${antal} marker · ${valgteNavne()}` : MARKER[reg.mark].navn;
   document.getElementById("f-prod").textContent = middel;
   document.getElementById("f-dose").value = dosis;
-  document.getElementById("f-areal").value = m.ha;
+  document.getElementById("f-areal").value = dk(valgtAreal());
   if(vejr){
     document.getElementById("f-vind").textContent = `${dk(vejr.wind_speed_10m)} m/s · ${retning(vejr.wind_direction_10m)}`;
     document.getElementById("f-temp").textContent = `${dk(vejr.temperature_2m)} °C`;
@@ -1882,14 +1812,19 @@ function idag(){
   return `${String(n.getDate()).padStart(2,"0")}.${String(n.getMonth()+1).padStart(2,"0")}.${String(n.getFullYear()).slice(2)}`;
 }
 function saveReg(){
-  const m=reg.mark, dose=document.getElementById("f-dose").value;
-  if(!JOURNAL[m]) JOURNAL[m]=[];
+  const dose=document.getElementById("f-dose").value;
+  const marker = reg.marker && reg.marker.length ? reg.marker : [reg.mark];
   const vejrTxt = vejr ? ` · vind ${dk(vejr.wind_speed_10m)} m/s ${retning(vejr.wind_direction_10m)}, ${dk(vejr.temperature_2m)} °C` : "";
-  JOURNAL[m].unshift({d:idag(), t:"Sprøjtning", txt:`${reg.produkt} · ${dose} l/ha${vejrTxt}`, c:"#C98F2B"});
+  marker.forEach(m => {
+    if(!JOURNAL[m]) JOURNAL[m]=[];
+    JOURNAL[m].unshift({d:idag(), t:"Sprøjtning", txt:`${reg.produkt} · ${dose} l/ha${vejrTxt}`, c:"#C98F2B"});
+  });
   persist();
   renderSJ(); closeSheet();
-  toast("Registrering gemt ✓");
-  openMark(m);
+  toast(marker.length > 1
+    ? `Gemt på ${marker.length} marker ✓ (${dk(valgtAreal())} ha)`
+    : "Registrering gemt ✓");
+  openMark(marker[0]);
 }
 
 /* toast */
@@ -1914,7 +1849,7 @@ const ONB_TRIN = [
   {ikon:"📐", titel:"Opret dine egne marker",
    tekst:"Under plus-knappen kan du hente en mark direkte fra markblokken — eller tegne den selv på kortet. Appen regner arealet ud for dig."},
   {ikon:"📋", titel:"Klar til kontrolbesøg",
-   tekst:"Under Mere finder du sprøjtejournalen. Vælg sæson og gem den som PDF med dit bedriftsnavn og CVR — klar til at vise frem."},
+   tekst:"Under Download finder du sprøjtejournalen. Vælg sæson og gem den som PDF eller CSV med dit bedriftsnavn og CVR — klar til at vise frem."},
 ];
 let onbTrin = 0;
 function onbVis(){

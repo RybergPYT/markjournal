@@ -24,6 +24,13 @@ Glemmer du at bygge, deployer du den gamle version.
 
 ## Kør lokalt og deploy
 
+**Start altid appen, når Søren nævner markjournal.** Han vil se appen live i højre
+side af skærmen — også selv om opgaven bare er et spørgsmål eller en lille rettelse.
+Kør `preview_start` med navnet `markjournal-web` som noget af det første, og sæt
+vinduet til mobilstørrelse (`resize_window` med preset `mobile`), så det ligner en
+telefon. Byg med `build.py` og genindlæs, når du har rettet noget, så det han ser i
+panelet er den nyeste version.
+
 Der findes en preview-konfiguration `markjournal-web` i `.claude/launch.json` (port 8090) —
 brug `preview_start` med det navn frem for at starte serveren manuelt. Manuelt svarer det til:
 
@@ -63,19 +70,24 @@ Modale trin (registrering, ny mark, indstillinger …) er `#step-*`-divs inde i 
 delt ark, styret af `showStep(navn)`. **Tilføjer du et nyt trin, skal navnet med i
 arrayet inde i `showStep()`** — ellers bliver det aldrig skjult igen.
 
+**Fanelinjen har fire faner** + plus-knappen: Kort, Marker, Download (`scr-sj` —
+sprøjtejournal med PDF/CSV-eksport) og Mere. **Opgave-funktionen er fjernet
+(27. juli 2026)** på Sørens ønske og erstattet af Download-fanen — genindfør den
+ikke. Nøglen `markjournal-opgaver-v1` kan stadig ligge i localStorage og i gamle
+sikkerhedskopier hos brugere; den bliver bare ignoreret.
+
 **Rækkefølge betyder noget.** Alt kører i ét stort script-tag uden moduler.
 `const`-erklæringer må ikke bruges før de er nået (temporal dead zone) — det har
 sprængt appen ved start én gang. Ved tvivl: brug funktionserklæringer (hoistes) eller
 skriv strenge direkte i stedet for at referere konstanter defineret længere nede.
 
-**Data i localStorage** (8 nøgler, alle med `-v1`-suffix):
+**Data i localStorage** (7 nøgler, alle med `-v1`-suffix):
 
 | Nøgle | Indhold | I backup? |
 |-------|---------|-----------|
 | `markjournal-journal-v1` | Alle registreringer pr. mark | ✅ |
 | `markjournal-marker-v1` | Brugerens egne oprettede marker | ✅ |
 | `markjournal-tilpasninger-v1` | Omdøbte/skjulte demomarker | ✅ |
-| `markjournal-opgaver-v1` | Opgaver | ✅ |
 | `markjournal-hotspots-v1` | Markeringer på kortet | ✅ |
 | `markjournal-indstillinger-v1` | Bedriftsnavn og CVR | ✅ |
 | `markjournal-onboarding-set-v1` | Er velkomstguiden vist? | ❌ (bevidst) |
