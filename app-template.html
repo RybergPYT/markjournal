@@ -199,6 +199,19 @@
     font-variant-numeric:tabular-nums;
   }
   .hvchip.sel{background:var(--green-100); border-color:var(--green-700); color:var(--green-900)}
+
+  /* ---------- Etiket fra Miljøstyrelsen ---------- */
+  .etiket-navn{font-size:1.05rem; font-weight:700}
+  .etiket-meta{font-size:.74rem; color:var(--muted); margin-top:3px; line-height:1.5}
+  .etiket-tekst{
+    font-size:.83rem; line-height:1.6; margin-top:12px;
+    padding-top:12px; border-top:1px solid var(--line);
+  }
+  .etiket-kilde{font-size:.68rem; color:var(--muted); margin-top:12px}
+  .etiket-advarsel{
+    background:var(--gold-soft); color:#7a5410; border-radius:10px;
+    padding:10px 12px; font-size:.8rem; font-weight:600; line-height:1.5; margin-top:10px;
+  }
   .kortbox.soeger{background:var(--green-700); color:#fff; border-color:var(--green-700)}
   .weathercard{
     position:absolute; left:12px; right:12px; bottom:12px; z-index:900;
@@ -565,6 +578,13 @@
             <div class="card" id="plist" style="margin-top:0"></div>
           </div>
 
+          <!-- step: etiket / godkendelsestekst fra Miljøstyrelsen -->
+          <div id="step-etiket" style="display:none">
+            <div class="card" id="etiket-indhold" style="padding:14px"></div>
+            <button class="bigbtn" onclick="bekraeftMiddel()">Vælg dette middel</button>
+            <button class="ghostbtn" onclick="showStep('produkt')">‹ Vælg et andet</button>
+          </div>
+
           <!-- step 4: details -->
           <div id="step-detaljer" style="display:none">
             <div class="sect-label">Detaljer</div>
@@ -758,13 +778,42 @@ function nulstil(){
   }
 }
 
-const PRODUKTER = [
-  {navn:"Propulse SE 250", aktiv:"fluopyram + prothioconazol", afgroder:["Vinterhvede","Vinterraps"], ok:true},
-  {navn:"Boxer", aktiv:"prosulfocarb", afgroder:["Vinterhvede"], ok:true, note:"Kun efterår, st. 10–29"},
-  {navn:"Mavrik Vita", aktiv:"tau-fluvalinat", afgroder:["Vinterraps"], ok:true},
-  {navn:"Karate 2,5 WG", aktiv:"lambda-cyhalothrin", afgroder:[], ok:false, note:"Godkendelse udløbet"},
-  {navn:"Roundup Flex", aktiv:"glyphosat", afgroder:["Stub","Brak (MFO)"], ok:true},
-];
+/* ===================== MIDDELDATABASE (Miljøstyrelsens BMD) ===================== */
+let MIDLER = [], MIDLER_META = null;
+fetch("./midler.json")
+  .then(r => r.json())
+  .then(d => { MIDLER = d.midler; MIDLER_META = d.meta;
+    if(document.getElementById("step-produkt").style.display !== "none") renderProducts(); })
+  .catch(() => { /* offline: listen er cachet af service worker, ellers vises besked */ });
+
+/* Ord der peger på en afgrøde i etiketteksten — bruges kun til at fremhæve, aldrig til at afgøre */
+const AFGRODE_ORD = {
+  "Vinterhvede": ["vinterhvede", "hvede", "korn", "vintersæd"],
+  "Vårhvede":    ["vårhvede", "hvede", "korn", "vårsæd"],
+  "Vinterbyg":   ["vinterbyg", "byg", "korn", "vintersæd"],
+  "Vårbyg":      ["vårbyg", "byg", "korn", "vårsæd"],
+  "Rug":         ["rug", "korn", "vintersæd"],
+  "Triticale":   ["triticale", "korn"],
+  "Havre":       ["havre", "korn"],
+  "Vinterraps":  ["vinterraps", "raps"],
+  "Vårraps":     ["vårraps", "raps"],
+  "Majs":        ["majs"],
+  "Kartofler":   ["kartofler", "kartoffel"],
+  "Sukkerroer":  ["bederoer", "sukkerroer", "roer"],
+  "Foderroer":   ["bederoer", "foderroer", "roer"],
+  "Slætgræs":    ["græs", "frøgræs", "kløvergræs"],
+  "Kløvergræs":  ["græs", "kløvergræs"],
+  "Ærter":       ["ærter"],
+  "Hestebønner": ["hestebønner", "bønner"],
+  "Brak (MFO)":  ["brak", "udyrkede"],
+  "Stub":        ["stub", "efter høst"],
+};
+function afgrodeTraef(middel, afgrode){
+  const ord = AFGRODE_ORD[afgrode];
+  const t = (middel.t || "").toLowerCase();
+  if(!ord || !t) return null;                    // ved det ikke
+  return ord.some(o => t.includes(o)) ? "ja" : "nej";
+}
 
 let navCurrent="scr-kort", reg={}, currentMark="m1";
 
@@ -1641,7 +1690,7 @@ function openSheet(forvalgtMark){
 }
 function closeSheet(){ document.getElementById("veil").classList.remove("open"); }
 function showStep(s){
-  ["type","mark","produkt","detaljer","generisk","nymark","redigermark","indstillinger","nyopgave","nyhotspot"].forEach(x=>{
+  ["type","mark","produkt","etiket","detaljer","generisk","nymark","redigermark","indstillinger","nyopgave","nyhotspot"].forEach(x=>{
     document.getElementById("step-"+x).style.display = x===s ? "block":"none";
   });
 }
@@ -1773,24 +1822,61 @@ function renderProducts(){
       <span class="ss-ikon">↻</span>
       <span class="ss-tekst"><strong>Som sidst</strong><br>${kort} · ${sidst.d}</span></button>`;
   } else { gen.style.display = "none"; gen.innerHTML = ""; }
-  PRODUKTER.filter(p=>p.navn.toLowerCase().includes(q)||p.aktiv.toLowerCase().includes(q)).forEach(p=>{
-    const approved=p.ok && p.afgroder.includes(crop);
-    const pill = !p.ok ? `<span class="pill bad">Udgået</span>` :
-      approved ? `<span class="pill ok">Godkendt · ${crop}</span>` :
-      `<span class="pill warn">Ikke godkendt i ${crop}</span>`;
-    const b=document.createElement("button"); b.className="row";
-    b.innerHTML=`<div class="grow"><div class="title">${p.navn}</div><div class="sub">${p.aktiv}${p.note?" · "+p.note:""}</div></div>${pill}`;
-    b.onclick=()=>{
-      if(!p.ok){ toast(p.navn+": godkendelsen er udløbet — kan ikke vælges", true); return; }
-      if(!approved){ toast(`${p.navn} er ikke godkendt i ${crop} — kan ikke vælges`, true); return; }
-      reg.produkt=p.navn;
-      const sidsteDosis = sidst && sidst.txt.startsWith(p.navn)
-        ? (sidst.txt.split(" · ")[1] || "").replace(/\s*l\/ha.*/, "").trim() : "";
-      aabnDetaljer(p.navn, sidsteDosis || "0,45");
-    };
+  if(!MIDLER.length){
+    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">Henter middeldatabasen …</div></div></div>`;
+    return;
+  }
+
+  /* Søg i navn og aktivstof. Uden søgning vises midler der nævner markens afgrøde først */
+  let traef = MIDLER.filter(p =>
+    p.n.toLowerCase().includes(q) || (p.a || "").toLowerCase().includes(q));
+  traef.forEach(p => { p._t = afgrodeTraef(p, crop); });
+  traef.sort((a, b) => (b._t === "ja") - (a._t === "ja") || a.n.localeCompare(b.n, "da"));
+  const ialt = traef.length;
+  traef = traef.slice(0, 40);
+
+  traef.forEach(p => {
+    const pill = p.s === "udfases"
+      ? `<span class="pill warn">Må bruges til ${p.f ? p.f.split("-").reverse().join(".") : "frist"}</span>`
+      : p._t === "ja" ? `<span class="pill ok">Nævner ${crop.toLowerCase()}</span>`
+      : p._t === "nej" ? `<span class="pill warn">Tjek etiket</span>`
+      : `<span class="pill info">Godkendt</span>`;
+    const b = document.createElement("button"); b.className = "row";
+    b.innerHTML = `<div class="grow"><div class="title">${p.n}</div>
+      <div class="sub">${p.a || "aktivstof ukendt"}${p.k ? " · " + p.k : ""} · reg. ${p.r}</div></div>${pill}`;
+    b.onclick = () => vaelgMiddel(p, crop, sidst);
     list.appendChild(b);
   });
+  if(ialt > traef.length){
+    list.innerHTML += `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+      Viser 40 af ${ialt} — søg på navn eller aktivstof for at indsnævre.</div></div></div>`;
+  }
+  if(!ialt){
+    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+      Fandt ingen midler der matcher "${q}". Prøv aktivstoffet i stedet.</div></div></div>`;
+  }
 }
+
+/* Viser etiketteksten fra Miljøstyrelsen, så brugeren selv kan bekræfte lovligheden */
+function vaelgMiddel(p, crop, sidst){
+  reg.produkt = p.n;
+  const advarsel = p.s === "udfases"
+    ? `<div class="etiket-advarsel">Godkendelsen er ophørt — må kun anvendes og opbevares til og med ${p.f.split("-").reverse().join(".")}</div>`
+    : p._t === "nej"
+      ? `<div class="etiket-advarsel">Etiketteksten nævner ikke ${crop.toLowerCase()}. Kontrollér selv på dunken, at midlet må bruges i denne afgrøde.</div>`
+      : "";
+  document.getElementById("etiket-indhold").innerHTML = `
+    <div class="etiket-navn">${p.n}</div>
+    <div class="etiket-meta">${p.a || ""}${p.k ? " · " + p.k : ""} · reg.nr. ${p.r}${p.b === "pro" ? " · professionel" : p.b === "privat" ? " · privat brug" : ""}</div>
+    ${advarsel}
+    <div class="etiket-tekst">${p.t || "Ingen anvendelsestekst i databasen — læs etiketten på dunken."}</div>
+    <div class="etiket-kilde">Kilde: Miljøstyrelsens Bekæmpelsesmiddeldatabase${MIDLER_META ? " · hentet " + MIDLER_META.hentet.split("-").reverse().join(".") : ""}</div>`;
+  const sidsteDosis = sidst && sidst.txt.startsWith(p.n)
+    ? (sidst.txt.split(" · ")[1] || "").replace(/\s*l\/ha.*/, "").trim() : "";
+  reg._dosis = sidsteDosis || "0,45";
+  showStep("etiket");
+}
+function bekraeftMiddel(){ aabnDetaljer(reg.produkt, reg._dosis || "0,45"); }
 function idag(){
   const n=new Date();
   return `${String(n.getDate()).padStart(2,"0")}.${String(n.getMonth()+1).padStart(2,"0")}.${String(n.getFullYear()).slice(2)}`;

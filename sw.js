@@ -1,7 +1,7 @@
-const CACHE = "markjournal-v2";
+const CACHE = "markjournal-v3";
 const ASSETS = [
   "./", "./index.html", "./manifest.webmanifest",
-  "./leaflet/leaflet.js", "./leaflet/leaflet.css",
+  "./leaflet/leaflet.js", "./leaflet/leaflet.css", "./midler.json",
 ];
 
 self.addEventListener("install", e => {

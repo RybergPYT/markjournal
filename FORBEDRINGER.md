@@ -19,11 +19,27 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 7. ~~PDF-eksport af sprøjtejournal (print-venlig side + window.print())~~ ✅ iteration 4
 8. Kemilager: simpel beholdning pr. middel, træk ved registrering
 9. ~~Udbytte-oversigt pr. mark under "Mere → Udbytter"~~ ✅ iteration 7
-10. Middeldatabase: erstat demo-listen med Miljøstyrelsens BMD-udtræk (statisk JSON i repo)
+10. ~~Middeldatabase: Miljøstyrelsens BMD-udtræk~~ ✅ iteration 16
 11. ~~Onboarding: første gang appen åbnes → kort guide~~ ✅ iteration 9 (Sørens ønske)
 12. Egne marker: vælg markblok på kortet og navngiv den (WFS point-query — CORS er ok)
 
 ## Selv-feedback pr. iteration
+
+### Iteration 16 (rigtig middeldatabase fra Miljøstyrelsen) — 27.07.26
+- ✅ De 5 opdigtede demo-produkter er erstattet af **440 rigtige midler** fra Miljøstyrelsens
+  Bekæmpelsesmiddeldatabase (420 godkendte + 20 under udfasning med gyldig anvendelsesfrist)
+- ✅ Fandt BMD's offentlige eksport-endpoint (/External/Entry/GenerateDocument, CSRF-token +
+  cookie, Excel-format). hent_midler.py gentager hele hentningen når data skal opdateres
+- ✅ Ny etiket-skærm: viser den **juridisk bindende anvendelsestekst** ("Må kun anvendes til
+  ukrudtsbekæmpelse i vintersæd, kartofler og frøgræs"), aktivstof, koncentration, reg.nr. og kilde
+- ✅ Udfasede midler får gul advarsel med den præcise frist ("må kun anvendes og opbevares
+  til og med 30.06.2027") — vigtigt og svært at holde styr på selv
+- ✅ Midler der nævner markens afgrøde sorteres øverst og markeres grønt; øvrige får "Tjek etiket"
+- ⚠️ **Bevidst designvalg:** appen dømmer IKKE længere "ikke godkendt i X" som før. Afgrøde-matchet
+  er tekstsøgning i etiketten og kan ikke være juridisk præcis — derfor vises den rigtige tekst,
+  og landmanden bekræfter selv. Det er mere ærligt end en opdigtet godkendelse
+- ⚠️ Ingen doseringsgrænser pr. afgrøde (findes ikke i BMD-udtrækket, kun i etiketten)
+- ⚠️ Data skal opdateres manuelt med hent_midler.py — bør nok gøres et par gange om året
 
 ### Iteration 15 (brugervenlighedspakke — Sørens ønske) — 26.07.26
 Fem forbedringer der alle sigter mod: brugbar stående i marken, én hånd, handsker på.
