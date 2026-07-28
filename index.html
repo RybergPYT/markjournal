@@ -153,15 +153,15 @@
     cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit; line-height:1;
     align-self:flex-end;
   }
-  .kortbox{
-    border-radius:12px; border:1px solid var(--line);
-    background:rgba(255,255,255,.94); color:var(--ink);
-    font-family:inherit; font-size:.8rem; font-weight:600; line-height:1;
-    min-height:44px; display:inline-flex; align-items:center; justify-content:flex-end;
-    padding:0 12px; cursor:pointer; white-space:nowrap;
-    box-shadow:0 2px 8px rgba(20,26,18,.12); text-align:right;
+  /* Ikonknap på kortet — kun symbol, navnet ligger i aria-label */
+  .kortikon{
+    width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+    background:rgba(255,255,255,.94); font-size:1.25rem; line-height:1;
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit;
+    align-self:flex-end; padding:0;
   }
-  .kortbox:active{background:var(--green-100)}
+  .kortikon:active{background:var(--green-100)}
 
   /* ---------- Handsketilpasset: store trykflader ---------- */
   .row{min-height:56px}
@@ -222,7 +222,7 @@
     background:var(--gold-soft); color:#7a5410; border-radius:10px;
     padding:10px 12px; font-size:.8rem; font-weight:600; line-height:1.5; margin-top:10px;
   }
-  .kortbox.soeger{background:var(--green-700); color:#fff; border-color:var(--green-700)}
+  .kortikon.soeger{background:var(--green-700); border-color:var(--green-700)}
   .weathercard{
     position:absolute; left:12px; right:12px; bottom:12px; z-index:900;
     background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:14px;
@@ -421,8 +421,8 @@
           <div class="zoombtns">
             <button class="zoombtn" onclick="kort.zoomIn()" aria-label="Zoom ind">+</button>
             <button class="zoombtn" onclick="kort.zoomOut()" aria-label="Zoom ud">−</button>
-            <button class="kortbox" onclick="hjemTilBedrift()">🏠 Mine marker</button>
-            <button class="kortbox" id="gpsKnap" onclick="findMigPaaKortet()">📍 Min placering</button>
+            <button class="kortikon" id="gpsKnap" onclick="findMigPaaKortet()"
+                    aria-label="Min placering" title="Min placering">📍</button>
           </div>
 
           <div class="herErDu" id="herErDu" style="display:none"></div>
@@ -1008,14 +1008,13 @@ function markVedPunkt(ll){
 function findMigPaaKortet(){
   if(!navigator.geolocation){ toast("Din telefon deler ikke position", true); return; }
   go("scr-kort");
+  /* Knappen er kun et ikon — søgningen vises med grøn baggrund og en toast */
   const knap = document.getElementById("gpsKnap");
-  const knapTekst = "📍 Min placering";
-  knap.textContent = "Søger …";
   knap.classList.add("soeger");
   toast("Finder din position …");
   navigator.geolocation.getCurrentPosition(
     p => {
-      knap.textContent = knapTekst; knap.classList.remove("soeger");
+      knap.classList.remove("soeger");
       const {ll, noej} = saetMigPaaKort(p, true);
       const id = markVedPunkt(ll);
       if(id) visHerErDu(id, noej);
@@ -1023,7 +1022,7 @@ function findMigPaaKortet(){
       startFoelgMig();
     },
     err => {
-      knap.textContent = knapTekst; knap.classList.remove("soeger");
+      knap.classList.remove("soeger");
       toast(err.code === 1
         ? "Giv appen lov til at bruge din position i telefonens indstillinger"
         : "Kunne ikke finde din position — prøv igen udendørs", true);
@@ -1069,7 +1068,6 @@ function toggleLayer(name, chip){
   else  { kort.removeLayer(fotoLag);   vejkortLag.addTo(kort); }
   blokkeLag.bringToFront && blokkeLag.bringToFront();
 }
-function hjemTilBedrift(){ kort.fitBounds(bedriftOmraade().pad(0.15)); }
 
 /* marknavne vises kun når man er zoomet tæt på */
 function opdaterLabels(){
