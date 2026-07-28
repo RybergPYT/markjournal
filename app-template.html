@@ -29,7 +29,9 @@
     --card:#FFFFFF;
     --line:#DFE4D7;
     --ink:#20261F;
-    --muted:#79816F;
+    /* Mørkere end oprindeligt (#79816F) — sikrer WCAG AA 4,5:1 mod både
+       app-baggrund og hvide kort, så sekundærtekst kan læses i sollys. */
+    --muted:#5F6857;
   }
   *{box-sizing:border-box; margin:0}
   html,body{height:100%}
@@ -106,19 +108,25 @@
   .row .title{font-size:.9rem; font-weight:600}
   .row .sub{font-size:.75rem; color:var(--muted); margin-top:2px}
   .row .end{font-size:.78rem; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right; flex-shrink:0}
-  .chev{color:var(--line); flex-shrink:0; font-size:.9rem}
+  .chev{color:var(--muted); flex-shrink:0; font-size:.9rem}
   .swatch{width:34px; height:34px; border-radius:9px; flex-shrink:0}
   .sect-label{
-    font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    font-size:.76rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
     color:var(--muted); margin:10px 18px 6px;
   }
   .pill{
-    font-size:.66rem; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap;
+    font-size:.72rem; font-weight:700; padding:4px 9px; border-radius:99px; white-space:nowrap;
+  }
+  /* Sektionsoverskrift inde i en liste (fx middeldatabasen) */
+  .list-sect{
+    background:var(--app-bg); border-bottom:1px solid var(--line);
+    padding:8px 16px; font-size:.72rem; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); position:sticky; top:0; z-index:1;
   }
   .pill.ok{background:var(--green-100); color:var(--green-700)}
   .pill.warn{background:var(--gold-soft); color:#8a6011}
   .pill.bad{background:var(--red-soft); color:var(--red)}
-  .pill.info{background:#E1EAF3; color:var(--blue)}
+  .pill.info{background:#E1EAF3; color:#35628D}
 
   /* ---------- Map screen (Leaflet) ---------- */
   #scr-kort{padding-bottom:0; padding-top:0}
@@ -130,25 +138,27 @@
   }
   .map-chip{
     background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:99px;
-    padding:7px 12px; font-size:.74rem; font-weight:600; color:var(--ink);
+    min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+    padding:0 14px; font-size:.78rem; font-weight:600; color:var(--ink);
     cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit;
   }
   .map-chip.on{background:var(--green-700); color:#fff; border-color:var(--green-700)}
   .zoombtns{
-    position:absolute; right:12px; top:calc(56px + env(safe-area-inset-top)); z-index:900;
+    position:absolute; right:12px; top:calc(66px + env(safe-area-inset-top)); z-index:900;
     display:flex; flex-direction:column; gap:6px; align-items:flex-end;
   }
   .zoombtn{
-    width:36px; height:36px; border-radius:10px; border:1px solid var(--line);
-    background:rgba(255,255,255,.94); color:var(--ink); font-size:1.15rem; font-weight:600;
+    width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+    background:rgba(255,255,255,.94); color:var(--ink); font-size:1.3rem; font-weight:600;
     cursor:pointer; box-shadow:0 2px 8px rgba(20,26,18,.12); font-family:inherit; line-height:1;
     align-self:flex-end;
   }
   .kortbox{
-    border-radius:10px; border:1px solid var(--line);
+    border-radius:12px; border:1px solid var(--line);
     background:rgba(255,255,255,.94); color:var(--ink);
-    font-family:inherit; font-size:.76rem; font-weight:600; line-height:1;
-    padding:10px 11px; cursor:pointer; white-space:nowrap;
+    font-family:inherit; font-size:.8rem; font-weight:600; line-height:1;
+    min-height:44px; display:inline-flex; align-items:center; justify-content:flex-end;
+    padding:0 12px; cursor:pointer; white-space:nowrap;
     box-shadow:0 2px 8px rgba(20,26,18,.12); text-align:right;
   }
   .kortbox:active{background:var(--green-100)}
@@ -510,12 +520,13 @@
         <button class="ghostbtn" onclick="openSheet()">+ Registrér høst</button>
       </div>
 
-      <!-- ============ DOWNLOAD (SPRØJTEJOURNAL) ============ -->
+      <!-- ============ JOURNAL (SPRØJTEJOURNAL + EKSPORT) ============ -->
       <div class="scr" id="scr-sj">
-        <div class="apphead"><h2>Download</h2><span class="pill info" id="sj-antal">–</span></div>
+        <div class="apphead"><h2>Journal</h2><span class="pill info" id="sj-antal">–</span></div>
         <div class="sect-label">Sprøjtejournal</div>
         <div class="fieldchips" id="sj-saeson"></div>
         <div class="card" id="sj-list"></div>
+        <div class="sect-label">Vis frem ved kontrol</div>
         <button class="bigbtn" onclick="eksportPDF()">Gem / print som PDF</button>
         <button class="ghostbtn" onclick="eksportCSV()">Eksportér CSV</button>
       </div>
@@ -670,7 +681,7 @@
       </button>
       <button class="tab-plus" onclick="openSheet()" aria-label="Ny registrering">+</button>
       <button class="tab" data-scr="scr-sj" onclick="tabGo(this)">
-        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>Download
+        <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>Journal
       </button>
       <button class="tab" data-scr="scr-mere" onclick="tabGo(this)">
         <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Mere
@@ -1757,34 +1768,96 @@ function renderProducts(){
     return;
   }
 
-  /* Søg i navn og aktivstof. Uden søgning vises midler der nævner markens afgrøde først */
+  /* Søg i navn og aktivstof */
   let traef = MIDLER.filter(p =>
     p.n.toLowerCase().includes(q) || (p.a || "").toLowerCase().includes(q));
   traef.forEach(p => { p._t = afgrodeTraef(p, crop); });
-  traef.sort((a, b) => (b._t === "ja") - (a._t === "ja") || a.n.localeCompare(b.n, "da"));
+  traef.sort((a, b) => a.n.localeCompare(b.n, "da"));
   const ialt = traef.length;
-  traef = traef.slice(0, 40);
 
-  traef.forEach(p => {
+  if(!ialt){
+    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+      Fandt ingen midler der matcher "${q}". Prøv aktivstoffet i stedet.</div></div></div>`;
+    return;
+  }
+
+  /* Én række. Kun reelle advarsler får et mærkat — afgrødematchet vises som
+     sektionsoverskrift, så mærkatet ikke gentages på hver eneste række. */
+  function tilfoej(p){
     const pill = p.s === "udfases"
       ? `<span class="pill warn">Må bruges til ${p.f ? p.f.split("-").reverse().join(".") : "frist"}</span>`
-      : p._t === "ja" ? `<span class="pill ok">Nævner ${crop.toLowerCase()}</span>`
-      : p._t === "nej" ? `<span class="pill warn">Tjek etiket</span>`
-      : `<span class="pill info">Godkendt</span>`;
+      : "";
     const b = document.createElement("button"); b.className = "row";
     b.innerHTML = `<div class="grow"><div class="title">${p.n}</div>
       <div class="sub">${p.a || "aktivstof ukendt"}${p.k ? " · " + p.k : ""} · reg. ${p.r}</div></div>${pill}`;
     b.onclick = () => vaelgMiddel(p, crop, sidst);
     list.appendChild(b);
+  }
+  function overskrift(tekst){
+    const d = document.createElement("div");
+    d.className = "list-sect"; d.textContent = tekst;
+    list.appendChild(d);
+  }
+
+  /* Under søgning: én flad liste, ingen sektioner */
+  if(q){
+    const vist = traef.slice(0, 40);
+    vist.forEach(tilfoej);
+    if(ialt > vist.length){
+      list.innerHTML += `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+        Viser 40 af ${ialt} — søg videre for at indsnævre.</div></div></div>`;
+    }
+    return;
+  }
+
+  /* Uden søgning: senest brugte først — landmanden bruger de samme få midler igen */
+  const senesteNavne = senestBrugteMidler(6);
+  const seneste = senesteNavne
+    .map(navn => traef.find(p => p.n === navn))
+    .filter(Boolean);
+  const brugt = new Set(seneste.map(p => p.n));
+
+  if(seneste.length){
+    overskrift("Senest brugt");
+    seneste.forEach(tilfoej);
+  }
+
+  const resten = traef.filter(p => !brugt.has(p.n));
+  const matcher = resten.filter(p => p._t === "ja");
+  const oevrige = resten.filter(p => p._t !== "ja");
+
+  const visMatch = matcher.slice(0, 40);
+  if(visMatch.length){
+    overskrift(`Nævner ${crop.toLowerCase()}`);
+    visMatch.forEach(tilfoej);
+    if(matcher.length > visMatch.length){
+      list.innerHTML += `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+        Viser 40 af ${matcher.length} — søg på navn eller aktivstof for at indsnævre.</div></div></div>`;
+    }
+  }
+  if(oevrige.length){
+    overskrift("Øvrige midler — tjek etiketten");
+    oevrige.slice(0, 20).forEach(tilfoej);
+    if(oevrige.length > 20){
+      list.innerHTML += `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
+        ${oevrige.length - 20} flere — søg på navn eller aktivstof.</div></div></div>`;
+    }
+  }
+}
+/* De senest anvendte midler på tværs af alle marker, nyeste først */
+function senestBrugteMidler(maks){
+  const alle = [];
+  Object.keys(JOURNAL).forEach(markId => {
+    (JOURNAL[markId] || []).forEach(e => {
+      if(e.t !== "Sprøjtning") return;
+      const navn = (e.txt || "").split(" · ")[0].trim();
+      if(navn) alle.push({ navn, sort: (e.d || "").split(".").reverse().join("") });
+    });
   });
-  if(ialt > traef.length){
-    list.innerHTML += `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
-      Viser 40 af ${ialt} — søg på navn eller aktivstof for at indsnævre.</div></div></div>`;
-  }
-  if(!ialt){
-    list.innerHTML = `<div class="row" style="cursor:default"><div class="grow"><div class="sub">
-      Fandt ingen midler der matcher "${q}". Prøv aktivstoffet i stedet.</div></div></div>`;
-  }
+  alle.sort((a, b) => b.sort.localeCompare(a.sort));
+  const set = [];
+  alle.forEach(x => { if(!set.includes(x.navn) && set.length < maks) set.push(x.navn); });
+  return set;
 }
 
 /* Viser etiketteksten fra Miljøstyrelsen, så brugeren selv kan bekræfte lovligheden */
@@ -1849,7 +1922,7 @@ const ONB_TRIN = [
   {ikon:"📐", titel:"Opret dine egne marker",
    tekst:"Under plus-knappen kan du hente en mark direkte fra markblokken — eller tegne den selv på kortet. Appen regner arealet ud for dig."},
   {ikon:"📋", titel:"Klar til kontrolbesøg",
-   tekst:"Under Download finder du sprøjtejournalen. Vælg sæson og gem den som PDF eller CSV med dit bedriftsnavn og CVR — klar til at vise frem."},
+   tekst:"Under Journal finder du sprøjtejournalen. Vælg sæson og gem den som PDF eller CSV med dit bedriftsnavn og CVR — klar til at vise frem."},
 ];
 let onbTrin = 0;
 function onbVis(){
