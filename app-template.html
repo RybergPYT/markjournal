@@ -117,6 +117,10 @@
   .pill{
     font-size:.72rem; font-weight:700; padding:4px 9px; border-radius:99px; white-space:nowrap;
   }
+  /* Forklaring når en liste er tom (ny bruger uden marker) */
+  .tomtekst{
+    color:var(--muted); font-size:.85rem; line-height:1.5; padding:4px 2px 2px;
+  }
   /* Sektionsoverskrift inde i en liste (fx middeldatabasen) */
   .list-sect{
     background:var(--app-bg); border-bottom:1px solid var(--line);
@@ -498,7 +502,7 @@
           </button>
           <button class="row" onclick="nulstil()">
             <div class="swatch" style="background:var(--red-soft);display:flex;align-items:center;justify-content:center">🗑️</div>
-            <div class="grow"><div class="title">Nulstil til demodata</div><div class="sub">Sletter dine registreringer på denne enhed</div></div>
+            <div class="grow"><div class="title">Slet alle registreringer</div><div class="sub">Tømmer journalen på denne enhed — dine marker beholdes</div></div>
           </button>
         </div>
       </div>
@@ -563,7 +567,7 @@
 
           <!-- step 2: mark (flere kan vælges) -->
           <div id="step-mark" style="display:none">
-            <div class="sect-label">Vælg mark — tryk flere for at registrere på én gang</div>
+            <div class="sect-label" id="markvalg-label">Vælg mark — tryk flere for at registrere på én gang</div>
             <div class="fieldchips" id="markchips"></div>
             <button class="bigbtn" id="markVidere" onclick="efterMarkValg()" disabled>Vælg en mark</button>
           </div>
@@ -696,15 +700,10 @@
 /* ===== Egne marker: rigtige markblok-polygoner i WGS84 (Landbrugsstyrelsen) ===== */
 const EGNE_GEOJSON = __EGNE_GEOJSON__;
 
-/* Statisk opsætning pr. markbloknr — navn, afgrøde og farve er brugerens egne */
-const MARK_CONFIG = {
-  "579138-47": {id:"m1", navn:"Nørremarken",  afgrode:"Vinterhvede", farve:"#c9b36a"},
-  "579138-54": {id:"m2", navn:"Kirkestykket", afgrode:"Vinterhvede", farve:"#b9c77a"},
-  "579137-56": {id:"m3", navn:"Åmarken",      afgrode:"Vinterraps",  farve:"#e8d44d"},
-  "578137-89": {id:"m4", navn:"Bakkelodden",  afgrode:"Slætgræs",    farve:"#7d9a54"},
-  "579137-84": {id:"m5", navn:"Langager",     afgrode:"Majs",        farve:"#c2a95e"},
-  "578137-88": {id:"m6", navn:"Mosen",        afgrode:"Brak (MFO)",  farve:"#9aa984"},
-};
+/* Statisk opsætning pr. markbloknr — navn, afgrøde og farve.
+   Tom: appen leveres uden marker, brugeren opretter sine egne fra markblok
+   eller ved at tegne dem på kortet. */
+const MARK_CONFIG = {};
 
 /* MARKER bygges ved opstart: konfiguration + rigtige arealer/geometri fra geojson */
 const MARKER = {};
@@ -740,26 +739,17 @@ function gemTilpas(){ try{ localStorage.setItem(TILPAS_LS, JSON.stringify(tilpas
 const FARVEPALET = ["#c9b36a","#b9c77a","#e8d44d","#7d9a54","#c2a95e","#9aa984","#a8c78a","#d4b06a"];
 
 /* ===== Data & lokal lagring ===== */
-const DEFAULT_JOURNAL = {
-  m1:[
-    {d:"02.07.26", t:"Sprøjtning", txt:"Propulse SE 250 · 0,45 l/ha", c:"#C98F2B"},
-    {d:"14.05.26", t:"Gødskning", txt:"NS 27-4 · 180 kg/ha", c:"#8a6a4b"},
-    {d:"21.09.25", t:"Såning", txt:"KWS Extase · 165 kg/ha", c:"#3A7D44"},
-  ],
-  m3:[
-    {d:"18.04.26", t:"Sprøjtning", txt:"Mavrik Vita · 0,2 l/ha", c:"#C98F2B"},
-    {d:"28.08.25", t:"Såning", txt:"DK Exposé · 2,8 kg/ha", c:"#3A7D44"},
-  ],
-};
+/* Journalen starter tom — appen leveres uden demoregistreringer */
+const DEFAULT_JOURNAL = {};
 const LS_KEY="markjournal-journal-v1";
 let JOURNAL;
 try{ JOURNAL = JSON.parse(localStorage.getItem(LS_KEY)) || structuredClone(DEFAULT_JOURNAL); }
 catch(e){ JOURNAL = structuredClone(DEFAULT_JOURNAL); }
 function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(JOURNAL)); }catch(e){} }
 function nulstil(){
-  if(confirm("Nulstil til demodata? Dine egne registreringer på denne enhed slettes.")){
+  if(confirm("Slet alle registreringer på denne enhed? Dine marker beholdes. Handlingen kan ikke fortrydes.")){
     JOURNAL = structuredClone(DEFAULT_JOURNAL); persist(); renderSJ();
-    toast("Nulstillet til demodata");
+    toast("Alle registreringer slettet");
     go("scr-mere");
   }
 }
@@ -827,6 +817,10 @@ function tegnMarkLag(id){
 }
 Object.keys(MARKER).forEach(tegnMarkLag);
 
+/* Fallback når brugeren endnu ikke har oprettet marker */
+const DANMARK = L.latLngBounds([54.5, 8.0], [57.8, 15.2]);
+
+/* Returnerer null, når der ingen marker er — kaldere skal falde tilbage */
 function bedriftOmraade(){
   let b = null;
   egneLag.eachLayer(l => { const lb = l.getBounds(); b = b ? b.extend(lb) : L.latLngBounds(lb.getSouthWest(), lb.getNorthEast()); });
@@ -851,13 +845,34 @@ const kort = L.map("map", {
   attributionControl: true,
 });
 kort.attributionControl.setPrefix("Vejr: DMI/Open-Meteo");
-kort.fitBounds(bedriftOmraade().pad(0.15));
+
+/* Åbn på markerne. Har brugeren ingen endnu, vises Danmark med det samme —
+   kortet må aldrig stå tomt mens vi venter — og der zoomes til brugerens
+   position, så snart den er klar. */
+function startKortUdsnit(){
+  const b = bedriftOmraade();
+  if(b){ kort.fitBounds(b.pad(0.15)); return; }
+  kort.fitBounds(DANMARK);
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    p => {
+      /* Nåede brugeren at oprette en mark imens, skal vi ikke overtage udsnittet */
+      if(bedriftOmraade()) return;
+      kort.setView([p.coords.latitude, p.coords.longitude], 15);
+    },
+    () => {},   /* ingen adgang til position: Danmark bliver stående */
+    {enableHighAccuracy:false, timeout:8000, maximumAge:600000}
+  );
+}
+startKortUdsnit();
 
 /* Kortet må ikke åbne zoomet ud på hele verden, hvis layoutet ikke var færdigt,
    da vi zoomede første gang (sker på telefoner og ved skift af skærmstørrelse) */
 function sikrKortUdsnit(){
   kort.invalidateSize();
-  if(kort.getZoom() < 10) kort.fitBounds(bedriftOmraade().pad(0.15));
+  const b = bedriftOmraade();
+  /* Danmark ligger omkring zoom 7, så tærsklen sænkes når der ingen marker er */
+  if(kort.getZoom() < (b ? 10 : 5)) kort.fitBounds(b ? b.pad(0.15) : DANMARK);
 }
 window.addEventListener("load", () => setTimeout(sikrKortUdsnit, 60));
 window.addEventListener("resize", () => setTimeout(sikrKortUdsnit, 200));
@@ -1301,7 +1316,9 @@ const KOMPAS = ["N","NNØ","NØ","ØNØ","Ø","ØSØ","SØ","SSØ","S","SSV","SV
 let vejr = null;
 
 async function hentVejr(){
-  const c = bedriftOmraade().getCenter();
+  /* Uden marker bruges det udsnit kortet står på (position eller Danmark) */
+  const omraade = bedriftOmraade();
+  const c = omraade ? omraade.getCenter() : kort.getCenter();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat.toFixed(3)}&longitude=${c.lng.toFixed(3)}`
     + `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation`
     + `&wind_speed_unit=ms&timezone=Europe/Copenhagen&models=dmi_seamless`;
@@ -1354,6 +1371,13 @@ function renderMarkList(){
     b.onclick=()=>openMark(id);
     ml.appendChild(b);
   });
+  /* Ny bruger: appen leveres uden marker, så listen skal forklare næste skridt */
+  if(!Object.keys(MARKER).length){
+    ml.innerHTML=`<div class="row" style="cursor:default"><div class="grow">
+      <div class="title">Ingen marker endnu</div>
+      <div class="sub">Tilføj din første mark herunder — hent den fra markblokken,
+      eller tegn den selv på kortet.</div></div></div>`;
+  }
   document.getElementById("totalha").textContent=totHa.toFixed(1).replace(".",",")+" ha i alt";
 }
 renderMarkList();
@@ -1669,6 +1693,21 @@ function pickType(t){
     };
     mc.appendChild(c);
   });
+  const knap = document.getElementById("markVidere");
+  const label = document.getElementById("markvalg-label");
+  /* Ingen marker endnu: trinnet ville ellers være en blindgyde med tom liste */
+  if(!Object.keys(MARKER).length){
+    label.textContent = "Ingen marker endnu";
+    mc.innerHTML = `<div class="tomtekst">Du har ingen marker endnu.
+      Opret din første mark, så kan du registrere på den.</div>`;
+    knap.disabled = false;
+    knap.textContent = "Opret din første mark";
+    knap.onclick = () => { closeSheet(); startVaelgBlok(); };
+    showStep("mark");
+    return;
+  }
+  label.textContent = "Vælg mark — tryk flere for at registrere på én gang";
+  knap.onclick = efterMarkValg;
   opdaterMarkKnap();
   showStep("mark");
 }

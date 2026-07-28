@@ -19,7 +19,8 @@ cd ~/Projekter/markjournal-web && python3 build.py
 ```
 
 `build.py` erstatter pladsholderen `__EGNE_GEOJSON__` i templaten med indholdet af
-`egne_marker_wgs84.json` (demobedriftens markblokke i WGS84) og skriver `index.html`.
+`egne_marker_wgs84.json` (markblokke i WGS84 — **tom siden 28. juli 2026**, se
+"Ingen demodata" nedenfor) og skriver `index.html`.
 Glemmer du at bygge, deployer du den gamle version.
 
 ## Kør lokalt og deploy
@@ -87,7 +88,7 @@ skriv strenge direkte i stedet for at referere konstanter defineret længere ned
 |-------|---------|-----------|
 | `markjournal-journal-v1` | Alle registreringer pr. mark | ✅ |
 | `markjournal-marker-v1` | Brugerens egne oprettede marker | ✅ |
-| `markjournal-tilpasninger-v1` | Omdøbte/skjulte demomarker | ✅ |
+| `markjournal-tilpasninger-v1` | Omdøbte/skjulte indbyggede marker | ✅ |
 | `markjournal-hotspots-v1` | Markeringer på kortet | ✅ |
 | `markjournal-indstillinger-v1` | Bedriftsnavn og CVR | ✅ |
 | `markjournal-onboarding-set-v1` | Er velkomstguiden vist? | ❌ (bevidst) |
@@ -96,10 +97,26 @@ skriv strenge direkte i stedet for at referere konstanter defineret længere ned
 Tilføjer du en ny datanøgle, skal den med i `BACKUP_NOEGLER`, ellers ryger den ved
 skift af telefon.
 
-**Demomarker vs. egne marker.** De seks marker fra `egne_marker_wgs84.json` er
-indbygget og kan ikke slettes rigtigt — de "skjules" via `tilpasninger`-nøglen.
-Brugerens egne marker fjernes derimod helt. `MARKER` (objekt i hukommelsen) er
-resultatet af begge dele lagt sammen ved opstart.
+**Ingen demodata (28. juli 2026).** Appen leveres tom på Sørens ønske:
+`egne_marker_wgs84.json` er en tom FeatureCollection, `MARK_CONFIG` er `{}` og
+`DEFAULT_JOURNAL` er `{}`. De seks demomarker (Bakkelodden, Nørremarken,
+Langager, Mosen, Kirkestykket, Åmarken) og de fem demoregistreringer ligger i
+git-historikken til og med commit `fca6828`, hvis de skal frem igen. Genindfør dem ikke
+uopfordret.
+
+Mekanikken er urørt: lægger du data i `egne_marker_wgs84.json` **og**
+`MARK_CONFIG` (nøgle = markbloknummer), bygges markerne ind igen. `MARKER` er
+disse plus brugerens egne fra `markjournal-marker-v1`, lagt sammen ved opstart.
+Indbyggede marker kan ikke slettes rigtigt — de "skjules" via
+`tilpasninger`-nøglen; egne marker fjernes helt.
+
+**Tom app = flere kodestier.** Uden marker returnerer `bedriftOmraade()` `null`.
+Kaldere **skal** falde tilbage, ellers sprænger kortet: `startKortUdsnit()` viser
+`DANMARK` med det samme og zoomer derefter til brugerens GPS-position (fejler den,
+bliver Danmark stående); `sikrKortUdsnit()` sænker zoom-tærsklen fra 10 til 5, da
+Danmark ligger omkring zoom 7; `hentVejr()` bruger `kort.getCenter()`. Marklisten
+og markvalget i registreringsflowet har hver sin tomme tilstand — markvalget ville
+ellers være en blindgyde med tom liste og deaktiveret knap.
 
 **Service worker.** `sw.js` cacher kun appens egne filer (netværk først, cache som
 fallback); kort-tiles og vejr-API rammer altid nettet. **Bump `CACHE`-versionen
