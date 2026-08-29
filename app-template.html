@@ -1785,6 +1785,31 @@ function saetDosis(d){
   document.getElementById("f-dose").value = d;
   tegnHurtigvalg(d);
 }
+/* BMD leverer aktivstof og styrke som to parallelle lister, der er klistret
+   sammen til én streng: a="prosulfocarb; clodinafop-propargyl" og
+   k="800; 10 g/l; g/l". Rå ser det ud som "800; 10 g/l; g/l" — her parres de til
+   "prosulfocarb 800 + clodinafop-propargyl 10 g/l". Kan strengen ikke parses,
+   vises rådata uændret frem for at gætte. */
+function formatAktivstof(p){
+  const a = (p.a || "").trim();
+  const k = (p.k || "").trim();
+  if(!a) return "aktivstof ukendt";
+  if(!k) return a;
+  const stoffer = a.split("; ");
+  const dele = k.split("; ");
+  const n = stoffer.length;
+  /* Forventet form: n-1 rene værdier, så "værdi enhed", så n-1 enheder */
+  if(dele.length !== 2*n - 1) return a + " · " + k;
+  const brud = dele[n-1].lastIndexOf(" ");
+  if(brud < 0) return a + " · " + k;
+  const vaerdier = dele.slice(0, n-1).concat(dele[n-1].slice(0, brud));
+  const enheder  = [dele[n-1].slice(brud+1)].concat(dele.slice(n));
+  if(vaerdier.length !== n || enheder.length !== n) return a + " · " + k;
+  /* Enheden er altid ens inden for ét middel, så den skrives kun til sidst */
+  const ens = enheder.every(e => e === enheder[0]);
+  if(ens) return stoffer.map((s,i) => s + " " + vaerdier[i]).join(" + ") + " " + enheder[0];
+  return stoffer.map((s,i) => s + " " + vaerdier[i] + " " + enheder[i]).join(" + ");
+}
 function renderProducts(){
   const q=(document.getElementById("psearch").value||"").toLowerCase();
   const crop=MARKER[reg.mark].afgrode;
@@ -1826,7 +1851,7 @@ function renderProducts(){
       : "";
     const b = document.createElement("button"); b.className = "row";
     b.innerHTML = `<div class="grow"><div class="title">${p.n}</div>
-      <div class="sub">${p.a || "aktivstof ukendt"}${p.k ? " · " + p.k : ""} · reg. ${p.r}</div></div>${pill}`;
+      <div class="sub">${formatAktivstof(p)} · reg. ${p.r}</div></div>${pill}`;
     b.onclick = () => vaelgMiddel(p, crop, sidst);
     list.appendChild(b);
   }
@@ -1907,7 +1932,7 @@ function vaelgMiddel(p, crop, sidst){
       : "";
   document.getElementById("etiket-indhold").innerHTML = `
     <div class="etiket-navn">${p.n}</div>
-    <div class="etiket-meta">${p.a || ""}${p.k ? " · " + p.k : ""} · reg.nr. ${p.r}${p.b === "pro" ? " · professionel" : p.b === "privat" ? " · privat brug" : ""}</div>
+    <div class="etiket-meta">${formatAktivstof(p)} · reg.nr. ${p.r}${p.b === "pro" ? " · professionel" : p.b === "privat" ? " · privat brug" : ""}</div>
     ${advarsel}
     <div class="etiket-tekst">${p.t || "Ingen anvendelsestekst i databasen — læs etiketten på dunken."}</div>
     <div class="etiket-kilde">Kilde: Miljøstyrelsens Bekæmpelsesmiddeldatabase${MIDLER_META ? " · hentet " + MIDLER_META.hentet.split("-").reverse().join(".") : ""}</div>`;

@@ -25,6 +25,96 @@ tager først. INGEN sky-synkronisering (Sørens beslutning, juli 2026).
 
 ## Selv-feedback pr. iteration
 
+### Iteration 20 (læsbar aktivstof-linje) — 28.07.26
+Tog første punkt op fra iteration 17's egen feedback.
+- ✅ BMD leverer aktivstof og styrke som to parallelle lister klistret sammen til
+  én streng: `a="prosulfocarb; clodinafop-propargyl"`, `k="800; 10 g/l; g/l"`.
+  Rå viste appen "prosulfocarb; clodinafop-propargyl · 800; 10 g/l; g/l" — hvor
+  "g/l; g/l" er ren støj. `formatAktivstof()` parrer dem nu:
+  **"prosulfocarb 800 + clodinafop-propargyl 10 g/l"**
+- ✅ Enheden skrives kun én gang til sidst. Kontrolleret mod hele databasen:
+  enhederne er **aldrig** blandede inden for ét middel, så det er entydigt
+- ✅ Verificeret på alle 440 midler: 439 formateres rent, 0 giver `undefined`/`NaN`
+- ✅ Bruges både i middellisten og på etiket-skærmen
+- ✅ Sidegevinst: de fleste rækker fylder nu én linje i stedet for to, så der er
+  flere midler synlige pr. skærm
+- ⚠️ Isomate CLR falder tilbage til rådata, fordi kilden selv er afkortet med "…"
+  (5 værdier, 3 aktivstoffer). Bevidst: funktionen gætter ikke, den viser rådata.
+  Det er 1 af 440
+- ⚠️ Fejlen stammer egentlig fra `hent_midler.py`, som sætter de to lister sammen
+  til én streng. Rettes den ved kilden (to separate felter), bliver visningen
+  simplere — men det kræver, at `midler.json` hentes igen
+- ⚠️ Resten af iteration 17's fund er stadig ikke rettet: markbloknumre ombryder,
+  blå tæller-chips i en grøn app, "Vælg en mark" ser trykbar ud mens den er
+  deaktiveret, journalrækker mangler chevron, og 💦/💧 er næsten samme ikon
+
+
+### Iteration 19 (appen leveres tom — Sørens ønske) — 28.07.26
+- ✅ Alle demodata fjernet: de seks demomarker (tom `egne_marker_wgs84.json` + tom
+  `MARK_CONFIG`) og de fem demoregistreringer (`DEFAULT_JOURNAL = {}`). index.html
+  faldt fra 104 til 91 KB
+- ✅ Uden marker giver `bedriftOmraade()` `null`, og kortet ville zoome ud til hele
+  verden. `startKortUdsnit()` viser nu Danmark straks og zoomer derefter til GPS;
+  nægtes position, bliver Danmark stående. Kortet venter aldrig på GPS
+- ✅ `sikrKortUdsnit()` sænker zoom-tærsklen fra 10 til 5 uden marker — Danmark
+  ligger omkring zoom 7 og ville ellers blive re-fittet i det uendelige
+- ✅ `hentVejr()` bruger kortets centrum, når der ingen marker er
+- ✅ To tomme tilstande som demodataene har skjult hele vejen: marklisten sagde
+  ingenting, og markvalget i registreringsflowet var en **blindgyde** (tom liste +
+  deaktiveret knap). Sidstnævnte fører nu direkte til "Opret din første mark"
+- ✅ "Nulstil til demodata" henviste til noget, der ikke findes mere → "Slet alle
+  registreringer"
+- ⚠️ **Konsekvens for eksisterende brugere:** registreringer, der ligger på m1–m6 i
+  localStorage, peger nu på marker, der ikke findes, og forsvinder ud af journalen
+  uden at blive slettet. Der er ingen oprydning eller migrering — bevidst fravalg,
+  da appen reelt kun har én bruger
+- ⚠️ Demomarkerne var det eneste, der viste appen i brug. Onboardingen forklarer
+  nu funktioner, som en ny bruger ikke kan se effekten af, før de selv har oprettet
+  en mark
+
+### Iteration 18 (kortknapper efter Sørens ønske) — 28.07.26
+- ✅ "Mine marker"-knappen (hus-ikon) fjernet helt, og `hjemTilBedrift()` slettet,
+  da den kun blev kaldt derfra. Opstartszoom går via `bedriftOmraade()` og er urørt
+- ✅ "Min placering" er nu en ren ikonknap (44×44) uden tekst; navnet ligger i
+  `aria-label` + `title`
+- ✅ Knappen skiftede før tekst til "Søger …" under GPS-opslag — det gav et
+  layout-hop. Nu bliver ikonet stående, og `.soeger` (grøn baggrund) + toast viser
+  tilstanden
+- ✅ `.kortbox` havde ingen brugere tilbage og er erstattet af `.kortikon`
+- ⚠️ Kortet har nu ingen genvej tilbage til bedriften, når man har panoreret væk.
+  Det var Sørens eksplicitte ønske, men det er den slags, man savner først efter
+  et stykke tids brug
+
+### Iteration 17 (designgennemgang: tre rettelser) — 28.07.26
+Struktureret designkritik af hele appen kørt i browserpanelet, derefter de tre
+højest prioriterede fund rettet.
+- ✅ **Fanen "Download" → "Journal"** (nyt dokumentikon). Skærmen *er*
+  sprøjtejournalen; download er blot måden at få den ud på. Den, der leder efter
+  "hvad har jeg sprøjtet?", ledte aldrig under Download
+- ✅ **Læsbarhed i sol og med handsker:** alle kortknapper op fra 32–38 px til
+  mindst 44 px. `--muted` mørkere (#79816F → #5F6857), sektionsoverskrifter og
+  pills op i størrelse. Chevronerne (›) stod i kantfarven med 1,3:1 og var reelt
+  usynlige. Målt bagefter: **alle tekster på Kort, Journal, Marker og Mere består
+  nu WCAG AA (4,5:1)** — seks dumpede før
+- ✅ **Middellisten** sorteres ikke længere rent alfabetisk gennem 440 midler. Uden
+  søgning vises "Senest brugt" (op til 6 fra journalen, nyeste først), "Nævner
+  <afgrøde>" og "Øvrige midler". Mærkatet "Nævner vinterhvede" stod på **hver
+  eneste række** og bar derfor ingen information — fjernet fra rækkerne og gjort
+  til sektionsoverskrift. Kun den reelle advarsel "Må bruges til <dato>" står
+  stadig på rækken
+- ⚠️ Fundet, men ikke rettet i denne iteration: aktivstof-linjen viser rå data
+  ("800; 10 g/l; g/l"), markbloknumre ombryder midt i nummeret, tæller-chips er
+  blå i en grøn app, "Vælg en mark"-knappen ser trykbar ud mens den er deaktiveret,
+  journalrækker mangler chevron (kan en fejlregistrering rettes?), og ikonerne for
+  Sprøjtning 💦 og Vanding 💧 er næsten ens
+- ⚠️ Doserings-, vejr- og etikettrinnene i sprøjteflowet blev **ikke** gennemgået —
+  programmatiske klik kom ikke forbi middelvalget. De er stadig ubedømte
+- ⚠️ "Senest brugt" kunne ikke verificeres med demodata, fordi demojournalens
+  midler (Propulse SE 250, Mavrik Vita) slet ikke findes i `midler.json`. Måtte
+  testes med rigtige midler fra databasen. Det betyder også, at "Som sidst" ikke
+  kan slå etiketten op for et middel, databasen ikke kender
+
+
 ### Iteration 16 (rigtig middeldatabase fra Miljøstyrelsen) — 27.07.26
 - ✅ De 5 opdigtede demo-produkter er erstattet af **440 rigtige midler** fra Miljøstyrelsens
   Bekæmpelsesmiddeldatabase (420 godkendte + 20 under udfasning med gyldig anvendelsesfrist)

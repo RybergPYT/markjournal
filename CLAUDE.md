@@ -71,10 +71,11 @@ Modale trin (registrering, ny mark, indstillinger …) er `#step-*`-divs inde i 
 delt ark, styret af `showStep(navn)`. **Tilføjer du et nyt trin, skal navnet med i
 arrayet inde i `showStep()`** — ellers bliver det aldrig skjult igen.
 
-**Fanelinjen har fire faner** + plus-knappen: Kort, Marker, Download (`scr-sj` —
-sprøjtejournal med PDF/CSV-eksport) og Mere. **Opgave-funktionen er fjernet
-(27. juli 2026)** på Sørens ønske og erstattet af Download-fanen — genindfør den
-ikke. Nøglen `markjournal-opgaver-v1` kan stadig ligge i localStorage og i gamle
+**Fanelinjen har fire faner** + plus-knappen: Kort, Marker, Journal (`scr-sj` —
+sprøjtejournal med PDF/CSV-eksport) og Mere. Fanen hed "Download" indtil
+28. juli 2026; den blev omdøbt, fordi skærmen *er* journalen — download er blot
+måden at få den ud på. **Opgave-funktionen er fjernet (27. juli 2026)** på Sørens
+ønske og erstattet af denne fane — genindfør den ikke. Nøglen `markjournal-opgaver-v1` kan stadig ligge i localStorage og i gamle
 sikkerhedskopier hos brugere; den bliver bare ignoreret.
 
 **Rækkefølge betyder noget.** Alt kører i ét stort script-tag uden moduler.
@@ -144,6 +145,12 @@ openSheet(Object.keys(MARKER)[0]); pickType("Sprøjtning");
 ```
 
 Faldgruber lært af tidligere fejl:
+- **Browserpanelet kan servere en gammel side.** `navigate` til samme URL efter et
+  `build.py` gav i én session den forrige version — `formatAktivstof is not defined`,
+  selv om funktionen lå i `index.html`. Det er panelets egen HTTP-cache, ikke `sw.js`
+  (den er netværk først og er uskyldig). Naviger med en cache-buster
+  (`http://localhost:8090/?frisk=<tal>`), eller tjek versionen med
+  `document.documentElement.innerHTML.includes("<noget nyt>")` før du fejlsøger videre.
 - **Test altid med frisk indlæsning.** Kortet zoomede engang ud til hele verden ved
   opstart, fordi `fitBounds` kørte før layoutet var færdigt — det ses ikke i en
   allerede varm side. `sikrKortUdsnit()` findes nu som værn.
